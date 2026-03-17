@@ -9,14 +9,14 @@ n8n:
       n8n:
         editor_base_url: "http://homelab-n8n.arguswatcher.net"   # domain
         port: 5678
-      webhook_url: "http://homelab-n8n.arguswatcher.net"          # domain
+        webhook_url: "http://homelab-n8n.arguswatcher.net"          # domain
       generic:
         timezone: America/Toronto
       
       db:
         type: postgresdb
         postgresdb:
-          host: postgres.n8n.svc.cluster.local
+          host: n8n-postgresql.n8n.svc.cluster.local
           port: 5432
           database: n8n
           user: n8n
