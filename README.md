@@ -11,3 +11,7 @@ helm repo update
 [ ] Workflow
 
 
+```sh
+# test local connection
+curl -
+```
