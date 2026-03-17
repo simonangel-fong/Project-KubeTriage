@@ -1,83 +1,92 @@
+# # values.yaml
 
-# --- Main n8n config ---
-main:
-  config:
-    n8n:
-      editor_base_url: "http://homelab-n8n.arguswatcher.net"   # domain
-    webhook_url: "http://homelab-n8n.arguswatcher.net"          # domain
-    generic:
-      timezone: America/Toronto
+# # ============================================================
+# # n8n Helm values 
+# # ============================================================
+# main:
+#   config:
+#     n8n:
+#       editor_base_url: "http://homelab-n8n.arguswatcher.net"   # domain
+#     webhook_url: "http://homelab-n8n.arguswatcher.net"          # domain
+#     generic:
+#       timezone: America/Toronto
     
-    db:
-      type: postgresdb
-      postgresdb:
-        host: postgres.n8n.svc.cluster.local
-        port: 5432
-        database: n8n
-        user: n8n
+#     db:
+#       type: postgresdb
+#       postgresdb:
+#         host: postgres.n8n.svc.cluster.local
+#         port: 5432
+#         database: n8n
+#         user: n8n
 
-  secret:
-    db:
-      postgresdb:
-        password: "n8n-db-password"
+#   secret:
+#     db:
+#       postgresdb:
+#         password: "n8n-db-password"
 
-replicaCount: 1
+# replicaCount: 1
 
-persistence:
+# persistence:
+#   enabled: true
+#   type: dynamic
+#   size: 2Gi
+#   accessModes:
+#     - ReadWriteOnce
+
+# resources:
+#   requests:
+#     cpu: 100m
+#     memory: 512Mi
+#   limits:
+#     cpu: 500m
+#     memory: 1Gi
+
+# deploymentStrategy:
+#   type: Recreate
+
+# worker:
+#   enabled: false
+
+# webhook:
+#   enabled: false
+
+# valkey:
+#   enabled: false
+
+# redis:
+#   enabled: false
+
+# # --- Ingress ---
+# ingress:
+#   enabled: true
+#   className: nginx
+#   annotations:
+#     nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+#     nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+#     nginx.ingress.kubernetes.io/proxy-body-size: "50m"
+#   hosts:
+#     - host: homelab-n8n.arguswatcher.net 
+#       paths:
+#         - path: /
+#           pathType: Prefix
+#   tls: []   # No TLS 
+
+# ============================================================
+# PostgreSQL 
+# ============================================================
+postgresql:
   enabled: true
-  type: dynamic
-  size: 5Gi
-  accessModes:
-    - ReadWriteOnce
-
-resources:
-  requests:
-    cpu: 100m
-    memory: 512Mi
-  limits:
-    cpu: 500m
-    memory: 1Gi
-
-
-deploymentStrategy:
-  type: Recreate
-
-worker:
-  enabled: false
-
-webhook:
-  enabled: false
-
-valkey:
-  enabled: false
-redis:
-  enabled: false
-
-# --- Ingress ---
-ingress:
-  enabled: true
-  className: nginx
-  annotations:
-    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
-    nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
-    nginx.ingress.kubernetes.io/proxy-body-size: "50m"
-  hosts:
-    - host: homelab-n8n.arguswatcher.net 
-      paths:
-        - path: /
-          pathType: Prefix
-  tls: []   # No TLS 
-
-
-  # Alternatively, pull the password from the existing k8s secret:
-  # extraEnv:
-  #   - name: DB_POSTGRESDB_PASSWORD
-  #     valueFrom:
-  #       secretKeyRef:
-  #         name: n8n-postgres-secret
-  #         key: POSTGRES_PASSWORD
-
-
-
-
-
+  auth:
+    database: n8n
+    username: n8n
+    password: "changeme"   # <-- must match main.secret.db.postgresdb.password above
+  primary:
+    persistence:
+      enabled: true
+      size: 5Gi
+      accessModes:
+        - ReadWriteOnce
+    service:
+      type: ClusterIP
+      ports:
+        postgresql: 5432
