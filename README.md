@@ -1,3 +1,13 @@
-# n8n_linkedin_job_tracker
 
-A repo of LinkedIn job tracker using n8n.
+
+```sh
+# https://github.com/community-charts/helm-charts/tree/main/charts/n8n
+helm repo add community-charts https://community-charts.github.io/helm-charts
+helm repo update
+```
+
+
+[ ] Install n8n
+[ ] Workflow
+
+
