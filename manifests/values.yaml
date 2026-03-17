@@ -24,6 +24,14 @@ n8n:
       db:
         postgresdb:
           password: "n8n-db-password"
+    
+    resources:
+      requests:
+        cpu: 100m
+        memory: 512Mi
+      limits:
+        cpu: 500m
+        memory: 1Gi
 
   replicaCount: 1
 
@@ -33,14 +41,6 @@ n8n:
     size: 2Gi
     accessModes:
       - ReadWriteOnce
-
-  resources:
-    requests:
-      cpu: 100m
-      memory: 512Mi
-    limits:
-      cpu: 500m
-      memory: 1Gi
 
   deploymentStrategy:
     type: Recreate
@@ -52,9 +52,6 @@ n8n:
     enabled: false
 
   valkey:
-    enabled: false
-
-  redis:
     enabled: false
 
   # --- Ingress ---
