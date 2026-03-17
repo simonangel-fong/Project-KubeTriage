@@ -4,8 +4,6 @@
 # n8n Helm values 
 # ============================================================
 n8n:
-  fullnameOverride: "n8n-app"
-  
   main:
     config:
       n8n:
