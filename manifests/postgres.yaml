@@ -45,7 +45,7 @@ spec:
           persistentVolumeClaim:
             claimName: postgres-pvc
 ---
-# Internal ClusterIP service so n8n can reach postgres
+# ClusterIP service
 apiVersion: v1
 kind: Service
 metadata:
