@@ -34,6 +34,24 @@ n8n:
         cpu: 500m
         memory: 1Gi
 
+    livenessProbe:
+      httpGet:
+        path: /healthz
+        port: 5678
+      initialDelaySeconds: 60
+      periodSeconds: 10
+      timeoutSeconds: 5
+      failureThreshold: 5
+
+    readinessProbe:
+      httpGet:
+        path: /healthz
+        port: 5678
+      initialDelaySeconds: 60
+      periodSeconds: 10
+      timeoutSeconds: 5
+      failureThreshold: 5
+
   replicaCount: 1
 
   persistence:

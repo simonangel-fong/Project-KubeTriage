@@ -1,17 +1,11 @@
-
-
 ```sh
-# https://github.com/community-charts/helm-charts/tree/main/charts/n8n
-helm repo add community-charts https://community-charts.github.io/helm-charts
-helm repo update
-```
+# connect with PVE host
+ssh aadmin@10.0.0.50
 
+# connect with VM with ProxyJump
+ssh -J aadmin@10.0.0.50 ubuntuadmin@192.168.100.150
 
-[ ] Install n8n
-[ ] Workflow
-
-
-```sh
 # test local connection
-curl -
+curl -vk https://192.168.100.150 -H "Host: homelab-n8n.arguswatcher.net"
+
 ```
