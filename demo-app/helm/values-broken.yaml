@@ -1,0 +1,14 @@
+# Usage:
+#   helm upgrade demo-app ./helm -f ./helm/values-broken.yaml
+
+nginx:
+  config: |
+    server {
+      listen 80;
+      server_name localhost;
+
+      location / {
+        root   /usr/share/nginx/html;
+        index  index.html;
+      # missing closing brace — nginx config test will fail
+    }
