@@ -26,12 +26,10 @@ n8n:
           password: "n8n-db-password"
     
     resources:
-      requests:
-        cpu: 100m
-        memory: 512Mi
       limits:
-        cpu: 500m
-        memory: 1Gi
+        memory: 2048Mi
+      requests:
+        memory: 512Mi
 
     livenessProbe:
       httpGet:
