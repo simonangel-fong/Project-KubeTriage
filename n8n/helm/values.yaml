@@ -1,0 +1,39 @@
+replicaCount: 1
+
+image:
+  repository: n8nio/n8n
+  tag: "1.94.1"
+  pullPolicy: IfNotPresent
+
+service:
+  type: ClusterIP
+  port: 5678
+
+resources:
+  requests:
+    memory: "128Mi"
+    cpu: "100m"
+  limits:
+    memory: "512Mi"
+    cpu: "500m"
+
+# ServiceAccount
+serviceAccount:
+  name: n8n-reader
+  namespace: n8n
+
+# n8n config via environment variables
+env:
+  # disable auth for homelab demo — enable in production
+  N8N_BASIC_AUTH_ACTIVE: "false"
+  N8N_PORT: "5678"
+  N8N_PROTOCOL: "http"
+  # persist workflows across pod restarts
+  N8N_USER_FOLDER: "/home/node/.n8n"
+  EXECUTIONS_DATA_PRUNE: "true"
+  EXECUTIONS_DATA_MAX_AGE: "24"
+
+persistence:
+  enabled: true
+  size: 1Gi
+  storageClass: "standard"    # minikube default storage class
