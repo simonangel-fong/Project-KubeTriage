@@ -1,0 +1,36 @@
+replicaCount: 1
+
+image:
+  repository: nginx
+  tag: "1.25-alpine"
+  pullPolicy: IfNotPresent
+
+service:
+  type: ClusterIP
+  port: 80
+
+resources:
+  requests:
+    memory: "32Mi"
+    cpu: "50m"
+  limits:
+    memory: "64Mi"
+    cpu: "100m"
+
+# nginx configuration — edit this to simulate an incident
+nginx:
+  config: |
+    server {
+      listen 80;
+      server_name localhost;
+
+      location / {
+        root   /usr/share/nginx/html;
+        index  index.html;
+      }
+
+      location /health {
+        return 200 'ok';
+        add_header Content-Type text/plain;
+      }
+    }
