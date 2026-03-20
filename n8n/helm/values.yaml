@@ -1,39 +1,144 @@
-replicaCount: 1
+# values.yaml
 
-image:
-  repository: n8nio/n8n
-  tag: "1.94.1"
-  pullPolicy: IfNotPresent
+# ============================================================
+# n8n Helm values 
+# ============================================================
+n8n:
+  main:
+    config:
+      n8n:
+        editor_base_url: "https://homelab-n8n.arguswatcher.net"
+        webhook_url: "https://homelab-n8n.arguswatcher.net"
+      generic:
+        timezone: America/Toronto
+    
+    serviceAccount:
+      name: n8n-reader
+      
+      db:
+        type: postgresdb
+        postgresdb:
+          host: n8n-postgresql.n8n.svc.cluster.local
+          port: 5432
+          database: n8n
+          user: n8n
 
-service:
-  type: ClusterIP
-  port: 5678
+    secret:
+      db:
+        postgresdb:
+          password: "n8n-db-password"
+    
+    resources:
+      limits:
+        memory: 2048Mi
+      requests:
+        memory: 512Mi
 
-resources:
-  requests:
-    memory: "128Mi"
-    cpu: "100m"
-  limits:
-    memory: "512Mi"
-    cpu: "500m"
+    livenessProbe:
+      httpGet:
+        path: /healthz
+        port: 5678
+      initialDelaySeconds: 60
+      periodSeconds: 10
+      timeoutSeconds: 5
+      failureThreshold: 5
 
-# ServiceAccount
-serviceAccount:
-  name: n8n-reader
-  namespace: n8n
+    readinessProbe:
+      httpGet:
+        path: /healthz
+        port: 5678
+      initialDelaySeconds: 60
+      periodSeconds: 10
+      timeoutSeconds: 5
+      failureThreshold: 5
 
-# n8n config via environment variables
-env:
-  # disable auth for homelab demo — enable in production
-  N8N_BASIC_AUTH_ACTIVE: "false"
-  N8N_PORT: "5678"
-  N8N_PROTOCOL: "http"
-  # persist workflows across pod restarts
-  N8N_USER_FOLDER: "/home/node/.n8n"
-  EXECUTIONS_DATA_PRUNE: "true"
-  EXECUTIONS_DATA_MAX_AGE: "24"
+  replicaCount: 1
 
-persistence:
+  persistence:
+    enabled: true
+    type: dynamic
+    size: 2Gi
+    accessModes:
+      - ReadWriteOnce
+
+  deploymentStrategy:
+    type: Recreate
+
+  worker:
+    enabled: false
+
+  webhook:
+    enabled: false
+
+  valkey:
+    enabled: false
+
+  # --- Ingress ---
+  ingress:
+    enabled: true
+    className: nginx
+    annotations:
+      nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+      nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+      nginx.ingress.kubernetes.io/proxy-body-size: "50m"
+    hosts:
+      - host: homelab-n8n.arguswatcher.net 
+        paths:
+          - path: /
+            pathType: Prefix
+    tls: []   # No TLS 
+
+  # --- extra: SA and clusterrole
+  extraManifests:
+    - apiVersion: v1
+      kind: ServiceAccount
+      metadata:
+        name: n8n-reader
+        namespace: n8n
+
+    - apiVersion: rbac.authorization.k8s.io/v1
+      kind: ClusterRole
+      metadata:
+        name: n8n-reader
+      rules:
+        - apiGroups: [""]
+          resources:
+            - pods
+            - pods/log
+            - events
+          verbs:
+            - get
+            - list
+
+    - apiVersion: rbac.authorization.k8s.io/v1
+      kind: ClusterRoleBinding
+      metadata:
+        name: n8n-reader
+      subjects:
+        - kind: ServiceAccount
+          name: n8n-reader
+          namespace: n8n
+      roleRef:
+        kind: ClusterRole
+        name: n8n-reader
+        apiGroup: rbac.authorization.k8s.io
+
+# ============================================================
+# PostgreSQL 
+# ============================================================
+postgresql:
   enabled: true
-  size: 1Gi
-  storageClass: "standard"    # minikube default storage class
+  auth:
+    database: n8n
+    username: n8n
+    password: "n8n-db-password"
+  primary:
+    persistence:
+      enabled: true
+      size: 5Gi
+      accessModes:
+        - ReadWriteOnce
+    service:
+      type: ClusterIP
+      ports:
+        postgresql: 5432
