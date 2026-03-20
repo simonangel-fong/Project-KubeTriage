@@ -31,6 +31,8 @@ n8n:
             key: token
       - name: K8S_API
         value: "https://kubernetes.default.svc"
+      - name: NODE_EXTRA_CA_CERTS
+        value: "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
 
     secret:
       db:
