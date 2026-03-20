@@ -88,6 +88,15 @@ n8n:
             pathType: Prefix
     tls: []   # No TLS 
 
+  extraEnv:
+    - name: K8S_TOKEN
+      valueFrom:
+        secretKeyRef:
+          name: n8n-reader-token
+          key: token
+    - name: K8S_API
+      value: "https://kubernetes.default.svc"
+
   # --- extra: SA and clusterrole
   extraManifests:
     # sa
