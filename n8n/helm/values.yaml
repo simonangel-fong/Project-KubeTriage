@@ -90,6 +90,7 @@ n8n:
 
   # --- extra: SA and clusterrole
   extraManifests:
+    # sa
     - apiVersion: v1
       kind: ServiceAccount
       metadata:
@@ -122,6 +123,16 @@ n8n:
         kind: ClusterRole
         name: n8n-reader
         apiGroup: rbac.authorization.k8s.io
+
+    # secret: token to access api server
+    - apiVersion: v1
+      kind: Secret
+      metadata:
+        name: n8n-reader-token
+        namespace: n8n
+        annotations:
+          kubernetes.io/service-account.name: n8n-reader
+      type: kubernetes.io/service-account-token
 
 # ============================================================
 # PostgreSQL 
