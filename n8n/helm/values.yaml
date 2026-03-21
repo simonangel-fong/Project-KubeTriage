@@ -7,8 +7,8 @@ n8n:
   main:
     config:
       n8n:
-        editor_base_url: "http://n8n.n8n.svc.cluster.local"
-        webhook_url: "http://n8n.n8n.svc.cluster.local"
+        editor_base_url: "http://n8n.n8n.svc.cluster.local:5678"
+        webhook_url: "http://n8n.n8n.svc.cluster.local:5678"
       generic:
         timezone: America/Toronto
     
