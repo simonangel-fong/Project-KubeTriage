@@ -1,0 +1,1088 @@
+{
+  "name": "LinkedIn Crawler - Cloud Engineer",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 1,
+              "triggerAtMinute": 13
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -2016,
+        224
+      ],
+      "id": "cba42db9-7549-4da3-a633-aa91bc67ebe4",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "operation": "extractHtmlContent",
+        "extractionValues": {
+          "values": [
+            {
+              "key": "post",
+              "cssSelector": "ul.jobs-search__results-list li",
+              "returnValue": "html",
+              "returnArray": true
+            }
+          ]
+        },
+        "options": {
+          "trimValues": true,
+          "cleanUpText": true
+        }
+      },
+      "type": "n8n-nodes-base.html",
+      "typeVersion": 1.2,
+      "position": [
+        -1344,
+        224
+      ],
+      "id": "e49c8f94-a110-481b-8b7f-167d6272fa11",
+      "name": "Extract Post List"
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "post",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        -1120,
+        224
+      ],
+      "id": "50026520-a0bd-4eeb-bce2-58781342dcd2",
+      "name": "Split Out"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        -896,
+        224
+      ],
+      "id": "9a25c9cf-0bf5-42b5-aa73-43ac16d37f1e",
+      "name": "Loop Over Posts"
+    },
+    {
+      "parameters": {
+        "operation": "extractHtmlContent",
+        "dataPropertyName": "post",
+        "extractionValues": {
+          "values": [
+            {
+              "key": "job_title",
+              "cssSelector": "h3.base-search-card__title"
+            },
+            {
+              "key": "company_name",
+              "cssSelector": "h4.base-search-card__subtitle a"
+            },
+            {
+              "key": "job_location",
+              "cssSelector": "div.base-search-card__metadata span"
+            },
+            {
+              "key": "job_url",
+              "cssSelector": "a.base-card__full-link",
+              "returnValue": "attribute",
+              "attribute": "=href"
+            },
+            {
+              "key": "company_url",
+              "cssSelector": "h4.base-search-card__subtitle a",
+              "returnValue": "attribute",
+              "attribute": "href"
+            },
+            {
+              "key": "post_date",
+              "cssSelector": "time.job-search-card__listdate--new",
+              "returnValue": "attribute",
+              "attribute": "datetime"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.html",
+      "typeVersion": 1.2,
+      "position": [
+        -672,
+        192
+      ],
+      "id": "f7a3b9d6-35a4-4a9e-8212-5fe9558348a6",
+      "name": "Extract Each Post"
+    },
+    {
+      "parameters": {
+        "jsCode": "const currentPost = {\n  job_title: $input.first().json.job_title,\n  company_name: $input.first().json.company_name,\n  job_location: $input.first().json.job_location,\n  job_url: $input.first().json.job_url.split(\"?\")[0],\n  job_id: $input.first().json.job_url.split(\"?\")[0].split(\"-\").at(-1),\n  company_url: $input.first().json.company_url.split(\"?\")[0],\n  post_date: $input.first().json.post_date,\n};\n\n$(\"Set Variable\").first().json.post.push(currentPost);\n\nreturn $(\"Set Variable\").first().json.post;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -448,
+        304
+      ],
+      "id": "ee4cffcf-900e-482b-b928-cc4d950747e9",
+      "name": "Update Post List"
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "17TQZ7Kl9gAcAbuPJ3lE5oPT05NNuOZylEs_uXv6sFYk",
+          "mode": "list",
+          "cachedResultName": "new_job_tracker",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/17TQZ7Kl9gAcAbuPJ3lE5oPT05NNuOZylEs_uXv6sFYk/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "={{$(\"Set Variable\").item.json.sheet_name}}",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "job_id": "={{ $json.job_id }}",
+            "post_date": "={{ $json.post_date }}",
+            "job_title": "={{ $json.job_title }}",
+            "job_location": "={{ $json.job_location }}",
+            "job_url": "={{ $json.job_url }}",
+            "company_name": "={{ $json.company_name }}",
+            "company_url": "={{ $json.company_url }}"
+          },
+          "matchingColumns": [
+            "job_id"
+          ],
+          "schema": [
+            {
+              "id": "job_id",
+              "displayName": "job_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "post_date",
+              "displayName": "post_date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "post_time",
+              "displayName": "post_time",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "job_title",
+              "displayName": "job_title",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "job_location",
+              "displayName": "job_location",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "job_url",
+              "displayName": "job_url",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "company_name",
+              "displayName": "company_name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "company_url",
+              "displayName": "company_url",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "description",
+              "displayName": "description",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "cloud_aws",
+              "displayName": "cloud_aws",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "cloud_azure",
+              "displayName": "cloud_azure",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "cloud_gcp",
+              "displayName": "cloud_gcp",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "cicd",
+              "displayName": "cicd",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "monitor",
+              "displayName": "monitor",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "database",
+              "displayName": "database",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "big_data",
+              "displayName": "big_data",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "container",
+              "displayName": "container",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "programming",
+              "displayName": "programming",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "soft_skill",
+              "displayName": "soft_skill",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "other",
+              "displayName": "other",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {
+          "useAppend": true
+        }
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.6,
+      "position": [
+        -672,
+        -16
+      ],
+      "id": "8a00ce01-83e0-49b6-a7e8-d9d85c868bdb",
+      "name": "Append or update row in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "MHtrmmTJB8VE2T5k",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "job_id, job_url",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        -448,
+        -16
+      ],
+      "id": "c2b04b6b-b58b-4269-ac05-1e86434f5958",
+      "name": "Split Out1"
+    },
+    {
+      "parameters": {
+        "operation": "extractHtmlContent",
+        "extractionValues": {
+          "values": [
+            {
+              "key": "post_time",
+              "cssSelector": "script[type=\"application/ld+json\"]",
+              "returnValue": "=html"
+            },
+            {
+              "key": "description",
+              "cssSelector": "div.description__text"
+            }
+          ]
+        },
+        "options": {
+          "trimValues": true,
+          "cleanUpText": true
+        }
+      },
+      "type": "n8n-nodes-base.html",
+      "typeVersion": 1.2,
+      "position": [
+        448,
+        32
+      ],
+      "id": "ea869cd3-5192-45ea-9bfb-8bbb9fa168aa",
+      "name": "Extract Post Data"
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.list_url }}",
+        "sendHeaders": true,
+        "specifyHeaders": "json",
+        "jsonHeaders": "{\n  \"User-Agent\": \"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36\",\n  \"Accept\": \"text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8\",\n  \"Accept-Language\": \"en-US,en;q=0.9\",\n  \"Accept-Encoding\": \"gzip, deflate, br\",\n  \"Connection\": \"keep-alive\",\n  \"Upgrade-Insecure-Requests\": \"1\",\n  \"Cache-Control\": \"no-cache\"\n}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -1568,
+        224
+      ],
+      "id": "b1d874a5-de95-4156-8cf8-78a0df01c5ac",
+      "name": "Request Post List"
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.job_url }}",
+        "sendQuery": true,
+        "specifyQuery": "json",
+        "jsonQuery": "{\n  \"User-Agent\": \"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36\",\n  \"Accept\": \"text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8\",\n  \"Accept-Language\": \"en-US,en;q=0.9\",\n  \"Accept-Encoding\": \"gzip, deflate, br\",\n  \"Connection\": \"keep-alive\",\n  \"Upgrade-Insecure-Requests\": \"1\",\n  \"Cache-Control\": \"no-cache\"\n}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        224,
+        32
+      ],
+      "id": "a16d567e-67a5-4124-b8d7-d33339d36f11",
+      "name": "Request Post Html"
+    },
+    {
+      "parameters": {
+        "jsCode": "const descJson = JSON.parse($input.first().json.post_time);\n\nconst utcDateString = descJson.datePosted;\n\nconst date = new Date(utcDateString);\n\nconst options = {\n  timeZone: \"America/Toronto\",\n  // year: \"numeric\",\n  // month: \"long\",\n  // day: \"numeric\",\n  hour: \"numeric\",\n  minute: \"numeric\",\n  second: \"numeric\",\n};\nconst localDateString = new Intl.DateTimeFormat(\"en-US\", options).format(date);\n\nconst output = {\n  post_time: localDateString,\n  description: $input.first().json.description,\n};\n\nreturn output;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        672,
+        32
+      ],
+      "id": "29f2c6a4-9285-4712-bc4c-c104ad08d1de",
+      "name": "Get Post Datetime"
+    },
+    {
+      "parameters": {
+        "text": "=You are an experienced HR and tech lead.\nThis is a job post\njob title: {{ $(\"Set Variable\").item.json.job_position }}\njob description:  {{ $json.description }}\n\nExtract the key skills mentioned then output them into a JSON format accordingly.\n\nField: cloud_aws\nDescription: the skill of AWS cloud skills. \nFor example: EC2, S3, Cloudwatch...\n\nField: cloud_azure\nDescription: the skill of Azure cloud skills. \nFor example: Repos, VMs, Blob Storage...\n\nField: cloud_gcp\nDescription: the skill of GCP cloud skills. \nFor example: Google Cloud Storage (GCS), Google Compute Engine (GCE)...\n\nField: cicd\nDescription: the skill of CICD\nFor example: Jenkins, terraform, Ansible, Github actions, GitLab...\n\nField: monitor\nDescription: the skill of monitoring\nFor example: Prometheus, Grafana, Grafana Loki, zabbix\n\nField: database\nDescription: the skill of database\nFor example: Oracle, SQL Server, MySQL, PostgresSQL, Mongodb, DynamoDB...\n\nField: big_data\nDescription: the skill of big data\nFor example: Hadoop, Hive, Spark, PySpark, ...\n\nField: container\nDescription: the skill of container\nFor example: Docker, Podman, Kubernetes...\n\nField: soft_skill\nDescription: the soft skills\nFor example: communication, collaboration, multi-tasking, ...\n\nField: programming\nDescription: the programming language skill\nFor example: Python, Java, Javascript, Go...\n\nField: other\nDescription: the skill of other tools but not in the above categories.\nFor example: Pytest, ...",
+        "schemaType": "manual",
+        "inputSchema": "{\n  \"job_id\": \"\",\n  \"post_date\": \"\",\n  \"post_time\": \"\",\n  \"job_title\": \"\",\n  \"job_location\": \"\",\n  \"job_url\": \"\",\n  \"company_name\": \"\",\n  \"company_url\": \"\",\n  \"location\": \"\",\n  \"description\": \"\",\n  \"cloud_aws\": \"\",\n  \"cloud_azure\": \"\",\n  \"cloud_gcp\": \"\",\n  \"cicd\": \"\",\n  \"monitor\": \"\",\n  \"database\": \"\",\n  \"big_data\": \"\",\n  \"container\": \"\",\n  \"programming\": \"\",\n  \"soft_skill\": \"\",\n  \"other\": \"\"\n}\n",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.informationExtractor",
+      "typeVersion": 1.2,
+      "position": [
+        896,
+        32
+      ],
+      "id": "88421419-055b-4113-98c2-b276697e6fab",
+      "name": "Information Extractor"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        976,
+        256
+      ],
+      "id": "ab24b442-1246-4ceb-a8dc-8d472fc7ad91",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "w4yE6xqASoutFBQJ",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        -224,
+        -16
+      ],
+      "id": "be92b1eb-be43-49da-af7a-8f2037df1075",
+      "name": "Loop Over JobPost"
+    },
+    {
+      "parameters": {
+        "amount": "={{ 600 + Math.random() * 120 }}"
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        0,
+        32
+      ],
+      "id": "0cfafacb-7d46-4013-9e12-d4e3930b8d86",
+      "name": "Wait",
+      "webhookId": "083a1ba1-9f15-4a39-9a32-f910fdc7e5fa"
+    },
+    {
+      "parameters": {
+        "mode": "raw",
+        "jsonOutput": "{\n  \"job_position\": \"cloud engineer\",\n  \"list_url\": \"https://www.linkedin.com/jobs/search?keywords=%22cloud%20engineer%22&f_TPR=r86400&geoId=105149290\",\n  \"sheet_name\": \"cloud_engineer\",\n  \"post\": []\n}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -1792,
+        224
+      ],
+      "id": "87367b6d-82a1-41a5-afc5-54900e6e4afe",
+      "name": "Set Variable"
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "17TQZ7Kl9gAcAbuPJ3lE5oPT05NNuOZylEs_uXv6sFYk",
+          "mode": "list",
+          "cachedResultName": "new_job_tracker",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/17TQZ7Kl9gAcAbuPJ3lE5oPT05NNuOZylEs_uXv6sFYk/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "={{ $(\"Set Variable\").item.json.sheet_name }}",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "job_id": "={{$('Loop Over JobPost').item.json.job_id}}",
+            "post_time": "={{ $(\"Get Post Datetime\").item.json.post_time }}",
+            "description": "={{ $('Extract Post Data').item.json.description }}",
+            "cloud_aws": "={{ $json.output.cloud_aws.join(\", \") }}",
+            "cloud_azure": "={{ $json.output.cloud_azure.join(\", \") }}",
+            "cloud_gcp": "={{ $json.output.cloud_gcp.join(\", \") }}",
+            "cicd": "={{ $json.output.cicd.join(\", \") }}",
+            "monitor": "={{ $json.output.monitor.join(\", \") }}",
+            "database": "={{ $json.output.database.join(\", \") }}",
+            "big_data": "={{ $json.output.big_data.join(\", \") }}",
+            "container": "={{ $json.output.container.join(\", \") }}",
+            "programming": "={{ $json.output.programming.join(\", \") }}",
+            "soft_skill": "={{ $json.output.soft_skill.join(\", \") }}",
+            "other": "={{ $json.output.other.join(\", \") }}"
+          },
+          "matchingColumns": [
+            "job_id"
+          ],
+          "schema": [
+            {
+              "id": "job_id",
+              "displayName": "job_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "post_date",
+              "displayName": "post_date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "post_time",
+              "displayName": "post_time",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "job_title",
+              "displayName": "job_title",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "job_location",
+              "displayName": "job_location",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "job_url",
+              "displayName": "job_url",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "company_name",
+              "displayName": "company_name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "company_url",
+              "displayName": "company_url",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "description",
+              "displayName": "description",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "cloud_aws",
+              "displayName": "cloud_aws",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "cloud_azure",
+              "displayName": "cloud_azure",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "cloud_gcp",
+              "displayName": "cloud_gcp",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "cicd",
+              "displayName": "cicd",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "monitor",
+              "displayName": "monitor",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "database",
+              "displayName": "database",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "big_data",
+              "displayName": "big_data",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "container",
+              "displayName": "container",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "programming",
+              "displayName": "programming",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "soft_skill",
+              "displayName": "soft_skill",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "other",
+              "displayName": "other",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.6,
+      "position": [
+        1248,
+        80
+      ],
+      "id": "edf8d82c-3214-45ae-9eae-ae0167000012",
+      "name": "Append or update row",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "MHtrmmTJB8VE2T5k",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "C0AMCPAM292",
+          "mode": "list",
+          "cachedResultName": "all-demo-n8n-linkedin-job-tracker"
+        },
+        "text": "={{ $('Append or update row in sheet').item.json.job_title }} - {{ $('Append or update row in sheet').item.json.company_name }}\n\n{{ $('Append or update row in sheet').item.json.job_location }}\n\nPost Url: {{ $('Append or update row in sheet').item.json.job_url }}\n\n\n\n",
+        "otherOptions": {}
+      },
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
+      "position": [
+        0,
+        -160
+      ],
+      "id": "b6bff242-2132-4466-a813-9a501a319bb1",
+      "name": "Send a message",
+      "webhookId": "4bdc8764-8c7b-4a87-9982-c0855022d9ff",
+      "credentials": {
+        "slackOAuth2Api": {
+          "id": "ktyPp7PvDgfhPzG1",
+          "name": "Slack account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Set Variable",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Post List": {
+      "main": [
+        [
+          {
+            "node": "Split Out",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Out": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Posts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Posts": {
+      "main": [
+        [
+          {
+            "node": "Append or update row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Extract Each Post",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Each Post": {
+      "main": [
+        [
+          {
+            "node": "Update Post List",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Post List": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Posts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append or update row in sheet": {
+      "main": [
+        [
+          {
+            "node": "Split Out1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Out1": {
+      "main": [
+        [
+          {
+            "node": "Loop Over JobPost",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Post Data": {
+      "main": [
+        [
+          {
+            "node": "Get Post Datetime",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Request Post List": {
+      "main": [
+        [
+          {
+            "node": "Extract Post List",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Request Post Html": {
+      "main": [
+        [
+          {
+            "node": "Extract Post Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Post Datetime": {
+      "main": [
+        [
+          {
+            "node": "Information Extractor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Information Extractor",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Information Extractor": {
+      "main": [
+        [
+          {
+            "node": "Append or update row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over JobPost": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait": {
+      "main": [
+        [
+          {
+            "node": "Request Post Html",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Variable": {
+      "main": [
+        [
+          {
+            "node": "Request Post List",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append or update row": {
+      "main": [
+        [
+          {
+            "node": "Loop Over JobPost",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "76d22549-18a5-4cc9-bc73-42f672ac8a26",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "47c22928f8fe946a991ae35cd2cc22acea2f8d3b32dd04378e42a04ab1839b27"
+  },
+  "id": "MwQC3jOSpV61R3JU",
+  "tags": [
+    {
+      "updatedAt": "2026-03-18T02:50:11.346Z",
+      "createdAt": "2026-03-18T02:50:11.346Z",
+      "id": "pCYeTyg0vaUv52Xi",
+      "name": "Cloud Engineer"
+    },
+    {
+      "updatedAt": "2026-03-18T02:50:11.441Z",
+      "createdAt": "2026-03-18T02:50:11.441Z",
+      "id": "tZLZ5SwiaUMaxNxf",
+      "name": "LinkedIn"
+    }
+  ]
+}
