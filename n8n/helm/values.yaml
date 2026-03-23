@@ -7,8 +7,8 @@ n8n:
   main:
     config:
       n8n:
-        editor_base_url: "https://homelab.arguswatcher.net/n8n/"
-        webhook_url: "https://homelab.arguswatcher.net/n8n/"
+        editor_base_url: "https://homelab-n8n.arguswatcher.net/"
+        webhook_url: "https://homelab-n8n.arguswatcher.net/"
       generic:
         timezone: America/Toronto
     
@@ -96,11 +96,10 @@ n8n:
       nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
       nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
       nginx.ingress.kubernetes.io/proxy-body-size: "50m"
-      nginx.ingress.kubernetes.io/rewrite-target: /
     hosts:
-      - host: homelab.arguswatcher.net 
+      - host: homelab-n8n.arguswatcher.net
         paths:
-          - path: /n8n
+          - path: /
             pathType: Prefix
     tls: []   # No TLS 
 
