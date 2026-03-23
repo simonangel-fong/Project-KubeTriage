@@ -10,7 +10,7 @@ metadata:
 spec:
   ingressClassName: nginx
   rules:
-    - host: homelab-demo-app.arguswatcher.net
+    - host: kubetriage-demo-app.arguswatcher.net
       http:
         paths:
           - path: / 

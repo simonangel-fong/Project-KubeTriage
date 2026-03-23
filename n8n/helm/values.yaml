@@ -96,10 +96,11 @@ n8n:
       nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
       nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
       nginx.ingress.kubernetes.io/proxy-body-size: "50m"
+      nginx.ingress.kubernetes.io/rewrite-target: /
     hosts:
-      - host: homelab-n8n.arguswatcher.net 
+      - host: homelab.arguswatcher.net 
         paths:
-          - path: /
+          - path: /n8n
             pathType: Prefix
     tls: []   # No TLS 
 
