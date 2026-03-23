@@ -9,4 +9,4 @@ data:
   default.conf: |
     {{ .Values.nginx.config | nindent 4 }}
   index.html: |
-    {{ .Values.nginx.config | nindent 4 }}
+    {{ .Values.nginx.index | nindent 4 }}
