@@ -56,7 +56,10 @@ spec:
 apiVersion: v1
 kind: Pod
 metadata:
-  name: nginx-error
+  name: {{ .Release.Name }}-error
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: {{ .Release.Name }}-error
 spec:
   volumes:
     - name: nginx-config
