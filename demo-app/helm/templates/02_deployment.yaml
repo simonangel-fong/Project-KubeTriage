@@ -52,3 +52,25 @@ spec:
         - name: nginx-config
           configMap:
             name: {{ .Release.Name }}-nginx-config
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nginx-custom-pod # Name of the Pod
+spec:
+  containers:
+    - name: nginx
+      image: nginx:latest 
+      ports:
+        - containerPort: 80
+      volumeMounts:
+        - name: nginx-index-volume # Name of the volume mount
+          mountPath: /usr/share/nginx/html/index.html 
+          subPath: index.html 
+        - name: nginx-config
+          mountPath: /usr/share/nginx/html/index.html
+          subPath: error.html
+      volumes:
+        - name: nginx-config
+          configMap:
+            name: {{ .Release.Name }}-nginx-config

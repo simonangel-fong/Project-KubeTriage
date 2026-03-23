@@ -10,3 +10,5 @@ data:
     {{ .Values.nginx.config | nindent 4 }}
   index.html: |
     {{ .Values.nginx.index | nindent 4 }}
+  error.html: |
+    {{ .Values.nginx.error | nindent 4 }}
