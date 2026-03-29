@@ -1,0 +1,170 @@
+# values.yaml
+
+# ============================================================
+# n8n Helm values 
+# ============================================================
+n8n:
+  main:
+    config:
+      n8n:
+        editor_base_url: "https://homelab-n8n.arguswatcher.net/"
+        webhook_url: "https://homelab-n8n.arguswatcher.net/"
+      generic:
+        timezone: America/Toronto
+    
+      db:
+        type: postgresdb
+        postgresdb:
+          host: n8n-postgresql.n8n.svc.cluster.local
+          port: 5432
+          database: n8n
+          user: n8n
+
+    serviceAccount:
+      name: n8n-reader
+
+    extraEnv:
+      - name: K8S_TOKEN
+        valueFrom:
+          secretKeyRef:
+            name: n8n-reader-token
+            key: token
+      - name: K8S_API
+        value: "https://kubernetes.default.svc"
+      - name: NODE_EXTRA_CA_CERTS
+        value: "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
+      - name: N8N_HOST
+        value: "n8n.n8n.svc.cluster.local"
+      # - name: N8N_PROTOCOL
+      #   value: "http"
+
+    secret:
+      db:
+        postgresdb:
+          password: "n8n-db-password"
+    
+    resources:
+      limits:
+        memory: 2048Mi
+      requests:
+        memory: 512Mi
+
+    livenessProbe:
+      httpGet:
+        path: /healthz
+        port: 5678
+      initialDelaySeconds: 60
+      periodSeconds: 10
+      timeoutSeconds: 5
+      failureThreshold: 5
+
+    readinessProbe:
+      httpGet:
+        path: /healthz
+        port: 5678
+      initialDelaySeconds: 60
+      periodSeconds: 10
+      timeoutSeconds: 5
+      failureThreshold: 5
+
+  replicaCount: 1
+
+  persistence:
+    enabled: true
+    type: dynamic
+    size: 2Gi
+    accessModes:
+      - ReadWriteOnce
+
+  deploymentStrategy:
+    type: Recreate
+
+  worker:
+    enabled: false
+
+  webhook:
+    enabled: false
+
+  valkey:
+    enabled: false
+
+  # --- Ingress ---
+  ingress:
+    enabled: true
+    className: nginx
+    annotations:
+      nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+      nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+      nginx.ingress.kubernetes.io/proxy-body-size: "50m"
+    hosts:
+      - host: homelab-n8n.arguswatcher.net
+        paths:
+          - path: /
+            pathType: Prefix
+    tls: []   # No TLS 
+
+  # --- extra: SA and clusterrole
+  extraManifests:
+    # sa
+    - apiVersion: v1
+      kind: ServiceAccount
+      metadata:
+        name: n8n-reader
+        namespace: n8n
+
+    - apiVersion: rbac.authorization.k8s.io/v1
+      kind: ClusterRole
+      metadata:
+        name: n8n-reader
+      rules:
+        - apiGroups: [""]
+          resources:
+            - pods
+            - pods/log
+            - events
+          verbs:
+            - get
+            - list
+
+    - apiVersion: rbac.authorization.k8s.io/v1
+      kind: ClusterRoleBinding
+      metadata:
+        name: n8n-reader
+      subjects:
+        - kind: ServiceAccount
+          name: n8n-reader
+          namespace: n8n
+      roleRef:
+        kind: ClusterRole
+        name: n8n-reader
+        apiGroup: rbac.authorization.k8s.io
+
+    # secret: token to access api server
+    - apiVersion: v1
+      kind: Secret
+      metadata:
+        name: n8n-reader-token
+        namespace: n8n
+        annotations:
+          kubernetes.io/service-account.name: n8n-reader
+      type: kubernetes.io/service-account-token
+
+# ============================================================
+# PostgreSQL 
+# ============================================================
+postgresql:
+  enabled: true
+  auth:
+    database: n8n
+    username: n8n
+    password: "n8n-db-password"
+  primary:
+    persistence:
+      enabled: true
+      size: 2Gi
+      accessModes:
+        - ReadWriteOnce
+    service:
+      type: ClusterIP
+      ports:
+        postgresql: 5432
