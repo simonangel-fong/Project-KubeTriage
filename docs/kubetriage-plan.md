@@ -25,6 +25,7 @@ Alertmanager → FastAPI webhook → AI agent (Claude) → Email notification
 **Goal:** Deploy the observability stack and a test workload.
 
 **Tasks:**
+
 - Enable Kubernetes in Docker Desktop settings
 - Deploy nginx as a simple target workload:
   ```bash
@@ -41,7 +42,8 @@ Alertmanager → FastAPI webhook → AI agent (Claude) → Email notification
 - Verify Prometheus scrapes the nginx deployment and Grafana is accessible at `localhost:3000`
 
 **Deliverables:**
-- `helm/values-monitoring.yaml` — custom Prometheus/Grafana values
+
+- `monitoring/helm/values.yaml` — custom Prometheus/Grafana values
 - Grafana dashboard accessible with nginx request metrics visible
 
 ---
@@ -52,14 +54,15 @@ Alertmanager → FastAPI webhook → AI agent (Claude) → Email notification
 
 #### Incident matrix
 
-| Incident | Simulation method | Key Prometheus metric |
-|---|---|---|
-| `ImagePullBackOff` | Bad image tag in deployment spec | `kube_pod_container_status_waiting_reason` |
-| `OOMKilled` | `memory: "10Mi"` resource limit | `container_oom_events_total` |
-| `ConfigError` | Missing ConfigMap reference in env | `kube_pod_status_phase{phase="Failed"}` |
-| `CrashLoopBackOff` | App exits non-zero on start | `kube_pod_container_status_restarts_total` |
+| Incident           | Simulation method                  | Key Prometheus metric                      |
+| ------------------ | ---------------------------------- | ------------------------------------------ |
+| `ImagePullBackOff` | Bad image tag in deployment spec   | `kube_pod_container_status_waiting_reason` |
+| `OOMKilled`        | `memory: "10Mi"` resource limit    | `container_oom_events_total`               |
+| `ConfigError`      | Missing ConfigMap reference in env | `kube_pod_status_phase{phase="Failed"}`    |
+| `CrashLoopBackOff` | App exits non-zero on start        | `kube_pod_container_status_restarts_total` |
 
 **Tasks:**
+
 - Create `manifests/incidents/` folder with one YAML per incident:
   - `imagepull.yaml` — deployment with `image: nginx:does-not-exist`
   - `oom.yaml` — deployment with `resources.limits.memory: "10Mi"`
@@ -71,6 +74,7 @@ Alertmanager → FastAPI webhook → AI agent (Claude) → Email notification
   - `expected_keywords` — list of strings that must appear in agent remediation output
 
 **Example fixture entry:**
+
 ```yaml
 - alertname: KubePodCrashLooping
   expected_category: CrashLoopBackOff
@@ -81,6 +85,7 @@ Alertmanager → FastAPI webhook → AI agent (Claude) → Email notification
 ```
 
 **Alertmanager webhook route config** (add to `alertmanager.yaml`):
+
 ```yaml
 receivers:
   - name: kubetriage-webhook
@@ -92,6 +97,7 @@ route:
 ```
 
 **Deliverables:**
+
 - `manifests/incidents/*.yaml` (4 files)
 - `prometheus/alert-rules.yaml`
 - `tests/fixtures/incident_fixtures.yaml`
@@ -103,6 +109,7 @@ route:
 **Goal:** A thin HTTP listener that validates, deduplicates, and enqueues alerts.
 
 **Project folder layout:**
+
 ```
 app/
   main.py               # FastAPI app init, router registration
@@ -125,11 +132,13 @@ prometheus/
 ```
 
 **Deduplication logic** (`dedup.py`):
+
 - Key: `f"{alertname}:{namespace}:{pod}"`
 - TTL: 10 minutes
 - Use a simple `dict` with timestamp; for production use Redis
 
 **`POST /webhook/alertmanager` behaviour:**
+
 1. Parse and validate payload with Pydantic `AlertmanagerPayload` model
 2. For each alert in `alerts[]` where `status == "firing"`:
    - Compute dedup key
@@ -138,13 +147,16 @@ prometheus/
 3. Return `{"status": "accepted"}` immediately (never block on agent)
 
 **Add a results endpoint for phase 2 testing:**
+
 ```python
 GET /results/{dedup_key}
 # Returns the last agent report for that key, or 404 if not yet available
 ```
+
 Store agent results in a simple in-memory dict keyed by dedup key.
 
 **Test the webhook manually:**
+
 ```bash
 curl -X POST http://localhost:8000/webhook/alertmanager \
   -H "Content-Type: application/json" \
@@ -152,6 +164,7 @@ curl -X POST http://localhost:8000/webhook/alertmanager \
 ```
 
 **Deliverables:**
+
 - `app/webhook.py`, `app/dedup.py`, `app/models.py`
 - `tests/test_webhook.py` with at least: valid payload accepted, duplicate rejected, malformed payload returns 422
 
@@ -277,6 +290,7 @@ kubectl create secret generic kubetriage-secrets \
 ```
 
 Reference in deployment:
+
 ```yaml
 env:
   - name: ANTHROPIC_API_KEY
@@ -287,6 +301,7 @@ env:
 ```
 
 **Deliverables:**
+
 - `app/k8s_tools.py`, `app/claude_client.py`, `app/agent.py`
 - `k8s/serviceaccount.yaml`, `k8s/clusterrole.yaml`, `k8s/clusterrolebinding.yaml`
 - `tests/test_agent.py` — unit tests with mocked tool responses
@@ -298,6 +313,7 @@ env:
 **Goal:** Format the Claude response into a readable engineer notification.
 
 **Email structure:**
+
 ```
 Subject: [KubeTriage] <CATEGORY> — <namespace>/<pod>
 
@@ -320,6 +336,7 @@ Escalate: <yes/no>
 ```
 
 **Configuration** (environment variables):
+
 ```
 SMTP_HOST=smtp.gmail.com
 SMTP_PORT=587
@@ -331,6 +348,7 @@ NOTIFY_TO=engineer@yourteam.com
 Mount SMTP credentials from a k8s Secret (same pattern as API key above).
 
 **Deliverables:**
+
 - `app/notifier.py`
 - Integration test: agent result → formatted email string (no live SMTP needed)
 
@@ -344,12 +362,12 @@ Mount SMTP credentials from a k8s Secret (same pattern as API key above).
 
 #### Required GitHub Secrets
 
-| Secret | Purpose |
-|---|---|
-| `AWS_ROLE_ARN` | IRSA role ARN for OIDC authentication |
-| `ECR_REGISTRY` | e.g. `123456789.dkr.ecr.us-east-1.amazonaws.com` |
-| `EKS_CLUSTER_NAME` | EKS cluster name |
-| `EKS_REGION` | AWS region |
+| Secret             | Purpose                                          |
+| ------------------ | ------------------------------------------------ |
+| `AWS_ROLE_ARN`     | IRSA role ARN for OIDC authentication            |
+| `ECR_REGISTRY`     | e.g. `123456789.dkr.ecr.us-east-1.amazonaws.com` |
+| `EKS_CLUSTER_NAME` | EKS cluster name                                 |
+| `EKS_REGION`       | AWS region                                       |
 
 > Use IRSA (IAM Roles for Service Accounts) with OIDC — avoid static `AWS_ACCESS_KEY_ID` credentials entirely.
 
@@ -374,6 +392,7 @@ job: deploy-eks  (needs: build-push)
 ```
 
 **Helm chart structure (`helm/`):**
+
 ```
 Chart.yaml
 values.yaml
@@ -386,6 +405,7 @@ templates/
 ```
 
 **Deliverables:**
+
 - `.github/workflows/deploy.yml`
 - `helm/` chart with all templates
 - IAM role + IRSA annotation on ServiceAccount
@@ -433,6 +453,7 @@ job: cleanup  (always runs)
 ```
 
 **Deliverables:**
+
 - `.github/workflows/chaos-test.yml`
 - `tests/evaluate.py`
 - Passing chaos test run for all 4 incident types
@@ -441,15 +462,15 @@ job: cleanup  (always runs)
 
 ## Key decisions reference
 
-| Decision | Choice | Reason |
-|---|---|---|
-| LLM | Claude (`claude-sonnet-4-6`) | Tool-use API, structured output |
-| CI/CD | GitHub Actions only | Simple, no extra tooling |
-| AWS auth | IRSA + OIDC | No long-lived credentials |
-| Alert dedup | In-memory dict (TTL 10 min) | Sufficient for single-instance |
-| Agent max iterations | 5 | Prevents runaway tool loops |
-| Secrets at runtime | k8s Secret + External Secrets | Never in CI env vars |
-| Evaluation | `incident_fixtures.yaml` + `evaluate.py` | Scriptable pass/fail |
+| Decision             | Choice                                   | Reason                          |
+| -------------------- | ---------------------------------------- | ------------------------------- |
+| LLM                  | Claude (`claude-sonnet-4-6`)             | Tool-use API, structured output |
+| CI/CD                | GitHub Actions only                      | Simple, no extra tooling        |
+| AWS auth             | IRSA + OIDC                              | No long-lived credentials       |
+| Alert dedup          | In-memory dict (TTL 10 min)              | Sufficient for single-instance  |
+| Agent max iterations | 5                                        | Prevents runaway tool loops     |
+| Secrets at runtime   | k8s Secret + External Secrets            | Never in CI env vars            |
+| Evaluation           | `incident_fixtures.yaml` + `evaluate.py` | Scriptable pass/fail            |
 
 ---
 

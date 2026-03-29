@@ -1,0 +1,9 @@
+
+
+grafana:
+  adminPassword: "MySecurePassword"
+
+prometheus-node-exporter:
+  hostRootFsMount:
+    enabled: false
+    mountPropagation: HostToContainer

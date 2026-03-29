@@ -1,0 +1,29 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-configerror
+  namespace: default
+  labels:
+    app: nginx-configerror
+    incident: configerror
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nginx-configerror
+  template:
+    metadata:
+      labels:
+        app: nginx-configerror
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:latest
+        env:
+        - name: APP_CONFIG
+          valueFrom:
+            configMapKeyRef:
+              name: nginx-config-missing   # ConfigMap does not exist
+              key: config.yaml
+        ports:
+        - containerPort: 80

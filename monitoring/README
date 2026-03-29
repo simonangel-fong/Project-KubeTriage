@@ -1,0 +1,53 @@
+## 1.1 Infrastructure setup
+
+```sh
+# deploy nginx
+kubectl create deployment nginx --image=nginx:latest --replicas=2
+kubectl expose deployment nginx --port=80
+
+kubectl get deploy
+# NAME    READY   UP-TO-DATE   AVAILABLE   AGE
+# nginx   2/2     2            2           16s
+
+
+# install prom + grafana
+helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+helm repo update
+
+cd monitoring/helm
+helm upgrade --install kube-prometheus-stack prometheus-community/kube-prometheus-stack --version "82.15.1" --namespace monitoring --create-namespace --values=values.yaml
+
+# access grafana
+kubectl port-forward svc/kube-prometheus-stack-grafana -n monitoring 3000:80
+
+# confirm Prometheus is scraping your nginx
+kubectl port-forward svc/kube-prometheus-stack-prometheus -n monitoring 9090:9090
+# localhost:9090/targets
+
+# add service monitor
+kubectl apply -f monitoring/manifests/nginx-servicemonitor.yaml
+# servicemonitor.monitoring.coreos.com/nginx-monitor created
+
+kubectl get servicemonitor.monitoring.coreos.com/nginx-monitor -n monitoring
+# NAME            AGE
+# nginx-monitor   83s
+```
+
+---
+
+## 1.2 Incident simulation & alert rules
+
+- Incident Testing
+
+```sh
+kubectl apply -f demo-app/manifests
+
+kubectl get po
+# NAME                                READY   STATUS                       RESTARTS      AGE
+# nginx-7f496995db-42jlt              1/1     Running                      0             12m
+# nginx-7f496995db-qd6m4              1/1     Running                      0             12m
+# nginx-configerror-5fdf8d4fb-cndz2   0/1     CreateContainerConfigError   0             3m31s
+# nginx-crashloop-7b595dfcc6-th47c    0/1     CrashLoopBackOff             5 (26s ago)   3m31s
+# nginx-imagepull-68ddb8d999-w5zh5    0/1     ImagePullBackOff             0             5m5s
+# nginx-oom-76674cb44b-mtckn          0/1     CreateContainerError         0             3m42s
+```

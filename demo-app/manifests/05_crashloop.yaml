@@ -1,0 +1,24 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-crashloop
+  namespace: default
+  labels:
+    app: nginx-crashloop
+    incident: crashloopbackoff
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nginx-crashloop
+  template:
+    metadata:
+      labels:
+        app: nginx-crashloop
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:latest
+        command: ["/bin/sh", "-c", "echo 'simulated crash' && exit 1"]  # command leads to crash
+        ports:
+        - containerPort: 80
