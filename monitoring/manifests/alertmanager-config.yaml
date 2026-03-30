@@ -15,7 +15,7 @@ spec:
     groupBy: ["alertname", "namespace", "pod"]
     groupWait: 10s
     groupInterval: 1m
-    repeatInterval: 10m           # re-fires every 10m
+    repeatInterval: 1m           # re-fires every 10m
   receivers:
   - name: kubetriage-webhook
     webhookConfigs:

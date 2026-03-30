@@ -1,46 +1,46 @@
 import os
 import anthropic
-from k8s_tools import get_pod_info, get_pod_events, get_pod_logs
-from agent.app.models.models import TriageReport
+from .k8s_tools import get_pod_info, get_pod_events, get_pod_logs
+from ..models.models import TriageReport
 
 TOOLS = [
-    {
-        "name": "get_pod_info",
-        "description": "Returns describe output for a specific pod including container state, restart count, waiting/terminated reasons.",
-        "input_schema": {
-            "type": "object",
-            "properties": {
-                "namespace": {"type": "string"},
-                "pod_name": {"type": "string"}
-            },
-            "required": ["namespace", "pod_name"]
-        }
-    },
-    {
-        "name": "get_pod_events",
-        "description": "Returns recent Kubernetes events for a pod including warnings and errors.",
-        "input_schema": {
-            "type": "object",
-            "properties": {
-                "namespace": {"type": "string"},
-                "pod_name": {"type": "string"}
-            },
-            "required": ["namespace", "pod_name"]
-        }
-    },
-    {
-        "name": "get_pod_logs",
-        "description": "Returns the last N lines of logs from a pod container. Use only if pod_info or events suggest an application-level error.",
-        "input_schema": {
-            "type": "object",
-            "properties": {
-                "namespace": {"type": "string"},
-                "pod_name": {"type": "string"},
-                "tail": {"type": "integer", "default": 50}
-            },
-            "required": ["namespace", "pod_name"]
-        }
-    }
+    # {
+    #     "name": "get_pod_info",
+    #     "description": "Returns describe output for a specific pod including container state, restart count, waiting/terminated reasons.",
+    #     "input_schema": {
+    #             "type": "object",
+    #             "properties": {
+    #                 "namespace": {"type": "string"},
+    #                 "pod_name": {"type": "string"}
+    #             },
+    #         "required": ["namespace", "pod_name"]
+    #     }
+    # },
+    # {
+    #     "name": "get_pod_events",
+    #     "description": "Returns recent Kubernetes events for a pod including warnings and errors.",
+    #     "input_schema": {
+    #             "type": "object",
+    #             "properties": {
+    #                 "namespace": {"type": "string"},
+    #                 "pod_name": {"type": "string"}
+    #             },
+    #         "required": ["namespace", "pod_name"]
+    #     }
+    # },
+    # {
+    #     "name": "get_pod_logs",
+    #     "description": "Returns the last N lines of logs from a pod container. Use only if pod_info or events suggest an application-level error.",
+    #     "input_schema": {
+    #             "type": "object",
+    #             "properties": {
+    #                 "namespace": {"type": "string"},
+    #                 "pod_name": {"type": "string"},
+    #                 "tail": {"type": "integer", "default": 50}
+    #             },
+    #         "required": ["namespace", "pod_name"]
+    #     }
+    # }
 ]
 
 SYSTEM_PROMPT = """You are KubeTriage, an SRE assistant that diagnoses Kubernetes pod incidents.
@@ -105,19 +105,19 @@ def _parse_report(text: str) -> TriageReport:
 
 def run_triage(alertname: str, namespace: str, pod: str, description: str) -> TriageReport:
     client = anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
-
-    messages = [
+    messages = []
+    messages.append(
         {
             "role": "user",
-            "content": (
-                f"Alert: {alertname}\n"
-                f"Namespace: {namespace}\n"
-                f"Pod: {pod}\n"
-                f"Description: {description}\n\n"
-                "Please triage this incident."
-            )
+            "content": f"""
+                Alert: {alertname}\n 
+                Namespace: {namespace}\n 
+                Pod: {pod}\n 
+                Description: {description}\n\n 
+                Please triage this incident.
+            """
         }
-    ]
+    )
 
     max_iterations = 5
     for _ in range(max_iterations):
@@ -154,7 +154,8 @@ def run_triage(alertname: str, namespace: str, pod: str, description: str) -> Tr
     return TriageReport(
         category="Unknown",
         root_cause="Agent did not produce a structured response.",
-        remediation=["Review pod manually with kubectl describe and kubectl logs."],
+        remediation=[
+            "Review pod manually with kubectl describe and kubectl logs."],
         kubectl_command=f"kubectl describe pod {pod} -n {namespace}",
         escalate=True
     )

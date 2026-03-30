@@ -5,10 +5,8 @@ from fastapi import APIRouter, BackgroundTasks, HTTPException
 from ..models import AlertmanagerPayload
 
 from ..config import get_settings
-from ..agent import store
-from ..models import IncidentRecord
-# import store
-# from agent import run_agent
+from ..models import IncidentRecord, AlertInfo
+from ..agent import run_agent
 
 router = APIRouter(prefix="/webhook", tags=["health"])
 
@@ -23,40 +21,24 @@ async def get_alert(
     background_tasks: BackgroundTasks
 ):
     results = []
-    logger.info(f"{payload.alerts}")
-    
+
     for alert in payload.alerts:
+
         if alert.status != "firing":
             continue
 
-        key = store.dedup_key(
-            alert.labels.alertname,
-            alert.labels.namespace,
-            alert.labels.pod
-        )
-
-        if store.is_duplicate(key):
-            logger.info(f"Deduplicated: {key}")
-            results.append({"dedup_key": key, "status": "deduplicated"})
-            continue
-
-        store.register(key)
-
-        record = IncidentRecord(
-            dedup_key=key,
+        alertInfo = AlertInfo(
             alertname=alert.labels.alertname,
             namespace=alert.labels.namespace,
             pod=alert.labels.pod,
             container=alert.labels.container,
             reason=alert.labels.reason,
-            status="pending",
             received_at=datetime.now(timezone.utc),
-            alert=alert
+            description=alert.annotations.description
         )
-        store.save_incident(record)
-        # background_tasks.add_task(run_agent, record, alert)
+        background_tasks.add_task(run_agent, alertInfo)
 
-        logger.info(f"Accepted: {key}")
-        results.append({"dedup_key": key, "status": "accepted"})
+        logger.info(f"Alert Info: {alertInfo}")
+        # results.append({"dedup_key": key, "status": "accepted"})
 
-    return {"results": results}
+    # return {"results": results}
