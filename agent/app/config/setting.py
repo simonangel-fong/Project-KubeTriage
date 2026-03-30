@@ -10,7 +10,6 @@ from pydantic import BaseModel, Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
-
 # ==============================
 # Application Settings
 # ==============================
@@ -51,6 +50,54 @@ class Settings(BaseSettings):
         default="http://localhost,http://localhost:8000,http://localhost:8080",
         alias="CORS",
         description="Allowed CORS origins",
+    )
+
+    # ------------------------------
+    # Anthropic
+    # ------------------------------
+    anthropic_api_key: str = Field(
+        default="",
+        alias="ANTHROPIC_API_KEY",
+        description="Anthropic API key",
+    )
+
+    anthropic_model: str = Field(
+        default="",
+        alias="ANTHROPIC_MODEL",
+        description="Anthropic model",
+    )
+
+    # ------------------------------
+    # Email
+    # ------------------------------
+    smtp_host: str = Field(
+        default="smtp.gmail.com",
+        alias="SMTP_HOST",
+        description="smtp host",
+    )
+
+    smtp_port: int = Field(
+        default=465,
+        alias="SMTP_PORT",
+        description="smtp host",
+    )
+
+    smtp_user: str = Field(
+        default="",
+        alias="SMTP_USER",
+        description="SMTP username / Gmail address",
+    )
+
+    smtp_password: str = Field(
+        default="",
+        alias="SMTP_PASSWORD",
+        description="smtp password",
+    )
+
+    notify_to: str = Field(
+        default="",
+        alias="NOTIFY_TO",
+        description="Recipient email address for triage notifications",
     )
 
     # ------------------------------

@@ -19,13 +19,38 @@ spec:
     - name: ANTHROPIC_API_KEY
       valueFrom:
         secretKeyRef:
-          name: anthropic-api-key 
-          key: anthropic_api_key
+          name: kubetriage-secrets
+          key: ANTHROPIC_API_KEY
     - name: ANTHROPIC_MODEL
       valueFrom:
         secretKeyRef:
-          name: anthropic-api-key 
-          key: anthropic_model
+          name: kubetriage-secrets
+          key: ANTHROPIC_MODEL
+    - name: SMTP_HOST
+      valueFrom:
+        secretKeyRef:
+          name: kubetriage-secrets
+          key: SMTP_HOST
+    - name: SMTP_PORT
+      valueFrom:
+        secretKeyRef:
+          name: kubetriage-secrets
+          key: SMTP_PORT
+    - name: SMTP_USER
+      valueFrom:
+        secretKeyRef:
+          name: kubetriage-secrets
+          key: SMTP_USER
+    - name: SMTP_PASSWORD
+      valueFrom:
+        secretKeyRef:
+          name: kubetriage-secrets
+          key: SMTP_PASSWORD
+    - name: NOTIFY_TO
+      valueFrom:
+        secretKeyRef:
+          name: kubetriage-secrets
+          key: NOTIFY_TO
 ---
 apiVersion: v1
 kind: Service

@@ -29,5 +29,15 @@ kubectl logs kubetriage -f
 ```
 
 ```sh
-kubectl create secret generic anthropic-api-key --from-literal=anthropic_api_key= --from-literal=anthropic_model=claude-haiku-4-5
+kubectl delete secret kubetriage-secrets     
+kubectl create secret generic kubetriage-secrets        \
+    --from-literal=ANTHROPIC_API_KEY=                   \
+    --from-literal=ANTHROPIC_MODEL=claude-haiku-4-5                 \
+    --from-literal=SMTP_HOST=smtp.gmail.com                         \
+    --from-literal=SMTP_PORT=587                                    \
+    --from-literal=SMTP_USER=""          \
+    --from-literal=SMTP_PASSWORD=                   \
+    --from-literal=NOTIFY_TO=""
+
+
 ```
