@@ -1,11 +1,11 @@
 # routers/webhook.py
 import logging
 from datetime import datetime, timezone
-from fastapi import APIRouter, BackgroundTasks, HTTPException
+from fastapi import APIRouter, BackgroundTasks
 from ..models import AlertmanagerPayload
 
 from ..config import get_settings
-from ..models import IncidentRecord, AlertInfo
+from ..models import AlertInfo
 from ..agent import run_agent
 
 router = APIRouter(prefix="/webhook", tags=["health"])

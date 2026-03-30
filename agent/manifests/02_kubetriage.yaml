@@ -7,6 +7,7 @@ metadata:
   name: kubetriage
   namespace: default
 spec:
+  serviceAccountName: kubetriage
   containers:
   - name: kubetriage
     image: simonangelfong/kubetriage:latest
@@ -14,6 +15,17 @@ spec:
     - name: "http"   
       containerPort: 8000
       protocol: TCP
+    env:
+    - name: ANTHROPIC_API_KEY
+      valueFrom:
+        secretKeyRef:
+          name: anthropic-api-key 
+          key: anthropic_api_key
+    - name: ANTHROPIC_MODEL
+      valueFrom:
+        secretKeyRef:
+          name: anthropic-api-key 
+          key: anthropic_model
 ---
 apiVersion: v1
 kind: Service

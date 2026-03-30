@@ -8,6 +8,7 @@ logger = logging.getLogger(__name__)
 
 async def run_agent(alertInfo: AlertInfo):
     # logger.info(f"Agent starting for {record.dedup_key}")
+    logger.info(f"========== run_agent ==========")
     try:
         report = run_triage(
             alertname=alertInfo.alertname,
@@ -15,6 +16,7 @@ async def run_agent(alertInfo: AlertInfo):
             pod=alertInfo.pod,
             description=alertInfo.description
         )
+        logger.info(f"report: {report}")
         logger.info(f"Agent completed")
     except Exception as e:
         logger.error(f"Agent failed: {e}")

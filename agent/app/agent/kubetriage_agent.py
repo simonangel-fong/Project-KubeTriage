@@ -1,46 +1,49 @@
 import os
+import logging
 import anthropic
 from .k8s_tools import get_pod_info, get_pod_events, get_pod_logs
 from ..models.models import TriageReport
 
+logger = logging.getLogger(__name__)
+
 TOOLS = [
-    # {
-    #     "name": "get_pod_info",
-    #     "description": "Returns describe output for a specific pod including container state, restart count, waiting/terminated reasons.",
-    #     "input_schema": {
-    #             "type": "object",
-    #             "properties": {
-    #                 "namespace": {"type": "string"},
-    #                 "pod_name": {"type": "string"}
-    #             },
-    #         "required": ["namespace", "pod_name"]
-    #     }
-    # },
-    # {
-    #     "name": "get_pod_events",
-    #     "description": "Returns recent Kubernetes events for a pod including warnings and errors.",
-    #     "input_schema": {
-    #             "type": "object",
-    #             "properties": {
-    #                 "namespace": {"type": "string"},
-    #                 "pod_name": {"type": "string"}
-    #             },
-    #         "required": ["namespace", "pod_name"]
-    #     }
-    # },
-    # {
-    #     "name": "get_pod_logs",
-    #     "description": "Returns the last N lines of logs from a pod container. Use only if pod_info or events suggest an application-level error.",
-    #     "input_schema": {
-    #             "type": "object",
-    #             "properties": {
-    #                 "namespace": {"type": "string"},
-    #                 "pod_name": {"type": "string"},
-    #                 "tail": {"type": "integer", "default": 50}
-    #             },
-    #         "required": ["namespace", "pod_name"]
-    #     }
-    # }
+    {
+        "name": "get_pod_info",
+        "description": "Returns describe output for a specific pod including container state, restart count, waiting/terminated reasons.",
+        "input_schema": {
+                "type": "object",
+                "properties": {
+                    "namespace": {"type": "string"},
+                    "pod_name": {"type": "string"}
+                },
+            "required": ["namespace", "pod_name"]
+        }
+    },
+    {
+        "name": "get_pod_events",
+        "description": "Returns recent Kubernetes events for a pod including warnings and errors.",
+        "input_schema": {
+                "type": "object",
+                "properties": {
+                    "namespace": {"type": "string"},
+                    "pod_name": {"type": "string"}
+                },
+            "required": ["namespace", "pod_name"]
+        }
+    },
+    {
+        "name": "get_pod_logs",
+        "description": "Returns the last N lines of logs from a pod container. Use only if pod_info or events suggest an application-level error.",
+        "input_schema": {
+                "type": "object",
+                "properties": {
+                    "namespace": {"type": "string"},
+                    "pod_name": {"type": "string"},
+                    "tail": {"type": "integer", "default": 50}
+                },
+            "required": ["namespace", "pod_name"]
+        }
+    }
 ]
 
 SYSTEM_PROMPT = """You are KubeTriage, an SRE assistant that diagnoses Kubernetes pod incidents.
@@ -119,10 +122,11 @@ def run_triage(alertname: str, namespace: str, pod: str, description: str) -> Tr
         }
     )
 
+    logger.info(f"========== AI agent: Start ==========")
     max_iterations = 5
     for _ in range(max_iterations):
         response = client.messages.create(
-            model="claude-sonnet-4-6",
+            model=os.environ["ANTHROPIC_MODEL"],
             max_tokens=1500,
             system=SYSTEM_PROMPT,
             tools=TOOLS,
@@ -133,6 +137,7 @@ def run_triage(alertname: str, namespace: str, pod: str, description: str) -> Tr
         messages.append({"role": "assistant", "content": response.content})
 
         if response.stop_reason == "end_turn":
+            logger.info(f"========== AI agent: Completed ==========")
             # extract final text block
             for block in response.content:
                 if block.type == "text":
@@ -140,6 +145,7 @@ def run_triage(alertname: str, namespace: str, pod: str, description: str) -> Tr
             break
 
         if response.stop_reason == "tool_use":
+            logger.info(f"========== AI agent: use tool ==========")
             tool_results = []
             for block in response.content:
                 if block.type == "tool_use":

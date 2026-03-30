@@ -27,3 +27,7 @@ kubectl apply -f agent/manifests
 kubectl replace --force -f agent/manifests --grace-period=0
 kubectl logs kubetriage -f
 ```
+
+```sh
+kubectl create secret generic anthropic-api-key --from-literal=anthropic_api_key= --from-literal=anthropic_model=claude-haiku-4-5
+```
