@@ -12,19 +12,18 @@ uvicorn main:app --reload
 - push image
 
 ```sh
-cd agent
-docker build -t kubetriage agent/
-docker rm agent-kubetriage --force
-docker run --name agent-kubetriage -d --rm -p 8000:8000 kubetriage
+docker build -t kubetriage:function-calling agent-function-calling/
+docker rm kubetriage:function-calling --force
+docker run --name agent-kubetriage -d --rm -p 8000:8000 kubetriage:function-calling
 
-docker build -t kubetriage agent/ && docker tag kubetriage simonangelfong/kubetriage && docker push simonangelfong/kubetriage
+docker build -t kubetriage:function-calling agent-function-calling/ && docker tag kubetriage:function-calling simonangelfong/kubetriage:function-calling && docker push simonangelfong/kubetriage:function-calling
 ```
 
 - Deploy
 
 ```sh
-kubectl apply -f agent/manifests
-kubectl replace --force -f agent/manifests --grace-period=0
+kubectl apply -f agent-function-calling/manifests
+kubectl replace --force -f agent-function-calling/manifests --grace-period=0
 kubectl logs kubetriage -f
 ```
 
