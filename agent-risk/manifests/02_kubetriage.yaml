@@ -10,7 +10,7 @@ spec:
   serviceAccountName: kubetriage
   containers:
   - name: kubetriage
-    image: simonangelfong/kubetriage:function-calling
+    image: simonangelfong/kubetriage:risk
     ports:
     - name: "http"   
       containerPort: 8000

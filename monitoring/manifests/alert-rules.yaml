@@ -49,16 +49,3 @@ spec:
       annotations:
         summary: "ConfigError on {{ $labels.pod }}"
         description: "Pod {{ $labels.namespace }}/{{ $labels.pod }} has a config error preventing container start"
-
-    - alert: KubePodOOMKilled
-      expr: |
-        kube_pod_container_status_last_terminated_reason{
-          reason="OOMKilled"
-        } == 1
-      for: 0s
-      labels:
-        severity: warning
-        team: kubetriage
-      annotations:
-        summary: "OOMKilled on {{ $labels.pod }}"
-        description: "Pod {{ $labels.namespace }}/{{ $labels.pod }} was killed due to out of memory"

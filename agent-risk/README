@@ -12,18 +12,18 @@ uvicorn main:app --reload
 - push image
 
 ```sh
-docker build -t kubetriage:function-calling agent-function-calling/
-# docker rm kubetriage:function-calling --force
-# docker run --name agent-kubetriage -d --rm -p 8000:8000 kubetriage:function-calling
+docker build -t kubetriage:risk agent-risk/
+# docker rm kubetriage:risk --force
+# docker run --name agent-kubetriage -d --rm -p 8000:8000 kubetriage:risk
 
-docker build -t kubetriage:function-calling agent-function-calling/ && docker tag kubetriage:function-calling simonangelfong/kubetriage:function-calling && docker push simonangelfong/kubetriage:function-calling
+docker build -t kubetriage:risk agent-risk/ && docker tag kubetriage:risk simonangelfong/kubetriage:risk && docker push simonangelfong/kubetriage:risk
 ```
 
 - Deploy
 
 ```sh
-kubectl apply -f agent-function-calling/manifests
-kubectl replace --force -f agent-function-calling/manifests --grace-period=0
+kubectl apply -f agent-risk/manifests
+kubectl replace --force -f agent-risk/manifests --grace-period=0
 kubectl logs kubetriage -f
 ```
 
@@ -39,4 +39,11 @@ kubectl create secret generic kubetriage-secrets        \
     --from-literal=NOTIFY_TO=""
 
 
+```
+        
+
+```sh
+docker build -t kubetriage:risk agent-risk/ && docker tag kubetriage:risk simonangelfong/kubetriage:risk && docker push simonangelfong/kubetriage:risk && kubectl replace --force -f agent-risk/manifests --grace-period=0
+
+kubectl logs kubetriage -f
 ```
