@@ -7,3 +7,10 @@ prometheus-node-exporter:
   hostRootFsMount:
     enabled: false
     mountPropagation: HostToContainer
+
+alertmanager:
+  alertmanagerSpec:
+    alertmanagerConfigSelector:
+      matchLabels:
+        alertmanagerConfig: kubetriage
+    alertmanagerConfigNamespaceSelector: {}

@@ -1,0 +1,23 @@
+apiVersion: monitoring.coreos.com/v1alpha1
+kind: AlertmanagerConfig
+metadata:
+  name: kubetriage-webhook
+  namespace: default
+  labels:
+    alertmanagerConfig: kubetriage
+spec:
+  route:
+    receiver: kubetriage-webhook
+    matchers:
+    - name: team
+      value: kubetriage
+      matchType: "="
+    groupBy: ["alertname", "namespace", "pod"]
+    groupWait: 10s
+    groupInterval: 1m
+    repeatInterval: 10m           # re-fires every 10m
+  receivers:
+  - name: kubetriage-webhook
+    webhookConfigs:
+    - url: "http://kubetriage.default.svc.cluster.local:8000/webhook/alertmanager"
+      sendResolved: false         # agent only needs firing alerts

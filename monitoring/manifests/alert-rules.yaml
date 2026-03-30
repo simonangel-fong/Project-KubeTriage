@@ -1,0 +1,64 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: kubetriage-alerts
+  namespace: monitoring
+  labels:
+    release: kube-prometheus-stack
+spec:
+  groups:
+  - name: kubetriage.incidents
+    interval: 30s
+    rules:
+
+    - alert: KubePodImagePullBackOff
+      expr: |
+        kube_pod_container_status_waiting_reason{
+          reason="ImagePullBackOff"
+        } == 1
+      for: 1m
+      labels:
+        severity: warning
+        team: kubetriage
+      annotations:
+        summary: "ImagePullBackOff on {{ $labels.pod }}"
+        description: "Pod {{ $labels.namespace }}/{{ $labels.pod }} cannot pull image for container {{ $labels.container }}"
+
+    - alert: KubePodCrashLooping
+      expr: |
+        kube_pod_container_status_waiting_reason{
+          reason="CrashLoopBackOff"
+        } == 1
+      for: 1m
+      labels:
+        severity: warning
+        team: kubetriage
+      annotations:
+        summary: "CrashLoopBackOff on {{ $labels.pod }}"
+        description: "Pod {{ $labels.namespace }}/{{ $labels.pod }} is crash looping"
+
+    - alert: KubePodConfigError
+      expr: |
+        kube_pod_container_status_waiting_reason{
+          reason="CreateContainerConfigError"
+        } == 1
+      for: 30s
+      labels:
+        severity: warning
+        team: kubetriage
+      annotations:
+        summary: "ConfigError on {{ $labels.pod }}"
+        description: "Pod {{ $labels.namespace }}/{{ $labels.pod }} has a config error preventing container start"
+
+    - alert: KubePodOOMKilled
+      expr: |
+        kube_pod_container_status_last_terminated_reason{
+          reason="OOMKilled"
+        } == 1
+      for: 0s
+      labels:
+        severity: warning
+        team: kubetriage
+      annotations:
+        summary: "OOMKilled on {{ $labels.pod }}"
+        description: "Pod {{ $labels.namespace }}/{{ $labels.pod }} was killed due to out of memory"

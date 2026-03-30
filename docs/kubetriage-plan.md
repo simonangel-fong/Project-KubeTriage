@@ -29,8 +29,7 @@ Alertmanager → FastAPI webhook → AI agent (Claude) → Email notification
 - Enable Kubernetes in Docker Desktop settings
 - Deploy nginx as a simple target workload:
   ```bash
-  kubectl create deployment nginx --image=nginx:latest --replicas=2
-  kubectl expose deployment nginx --port=80
+  kubectl apply -f demo-app/manifests/01_healthy.yaml
   ```
 - Install Prometheus + Grafana via Helm:
   ```bash
@@ -63,7 +62,7 @@ Alertmanager → FastAPI webhook → AI agent (Claude) → Email notification
 
 **Tasks:**
 
-- Create `manifests/incidents/` folder with one YAML per incident:
+- Create `demo-app/manifests/` folder with one YAML per incident:
   - `imagepull.yaml` — deployment with `image: nginx:does-not-exist`
   - `oom.yaml` — deployment with `resources.limits.memory: "10Mi"`
   - `configerror.yaml` — deployment referencing a non-existent ConfigMap
@@ -98,7 +97,7 @@ route:
 
 **Deliverables:**
 
-- `manifests/incidents/*.yaml` (4 files)
+- `manifests/*.yaml` (1 healthy + 4 incident files)
 - `prometheus/alert-rules.yaml`
 - `tests/fixtures/incident_fixtures.yaml`
 

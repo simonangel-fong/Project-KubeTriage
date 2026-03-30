@@ -1,0 +1,11 @@
+
+```sh
+python -m venv .venv
+python.exe -m pip install --upgrade pip
+
+pip install "fastapi[standard]" pydantic anthropic kubernetes
+
+cd agent/app
+uvicorn main:app --reload
+
+```

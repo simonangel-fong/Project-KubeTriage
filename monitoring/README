@@ -14,8 +14,8 @@ kubectl get deploy
 helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
 helm repo update
 
-cd monitoring/helm
-helm upgrade --install kube-prometheus-stack prometheus-community/kube-prometheus-stack --version "82.15.1" --namespace monitoring --create-namespace --values=values.yaml
+cd 
+helm upgrade --install kube-prometheus-stack prometheus-community/kube-prometheus-stack --version "82.15.1" --namespace monitoring --create-namespace --values=monitoring/helm/values.yaml
 
 # access grafana
 kubectl port-forward svc/kube-prometheus-stack-grafana -n monitoring 3000:80
@@ -50,4 +50,317 @@ kubectl get po
 # nginx-crashloop-7b595dfcc6-th47c    0/1     CrashLoopBackOff             5 (26s ago)   3m31s
 # nginx-imagepull-68ddb8d999-w5zh5    0/1     ImagePullBackOff             0             5m5s
 # nginx-oom-76674cb44b-mtckn          0/1     CreateContainerError         0             3m42s
+```
+
+- Add alert
+
+```sh
+kubectl apply -f monitoring/manifests/alert-rules.yaml
+# prometheusrule.monitoring.coreos.com/kubetriage-alerts created
+
+kubectl get prometheusrule.monitoring.coreos.com/kubetriage-alerts -n monitoring
+# NAME                AGE
+# kubetriage-alerts   29s
+
+# add alert manager
+kubectl apply -f monitoring/manifests/alertmanager-config.yaml
+
+kubectl get alertmanagerconfig.monitoring.coreos.com/kubetriage-webhook
+# NAME                 AGE
+# kubetriage-webhook   5s
+
+# confirm alert manager
+kubectl port-forward svc/kube-prometheus-stack-alertmanager -n monitoring 9093:9093
+# localhost:9093
+```
+
+```sh
+# test playload
+kubectl run payload-capture --image=mendhak/http-https-echo:latest --port=8080 --restart=Never -n default
+kubectl expose pod payload-capture --port=8080 -n default
+kubectl patch alertmanagerconfig kubetriage-webhook -n default \
+  --type='json' \
+  -p='[{"op":"replace","path":"/spec/receivers/0/webhookConfigs/0/url","value":"http://payload-capture.default.svc.cluster.local:8080"}]'
+# alertmanagerconfig.monitoring.coreos.com/kubetriage-webhook patched
+
+# watch the logs for the incoming POST
+kubectl logs payload-capture -n default -f
+# Listening on ports 8080 for http, and 8443 for https.
+# {
+#     "path": "/",
+#     "headers": {
+#         "host": "payload-capture.default.svc.cluster.local:8080",
+#         "user-agent": "Alertmanager/0.31.1",
+#         "content-length": "2051",
+#         "content-type": "application/json"
+#     },
+#     "method": "POST",
+#     "body": "{\"receiver\":\"default/kubetriage-webhook/kubetriage-webhook\",\"status\":\"firing\",\"alerts\":[{\"status\":\"firing\",\"labels\":{\"alertname\":\"KubePodConfigError\",\"container\":\"nginx\",\"endpoint\":\"http\",\"instance\":\"10.1.6.199:8080\",\"job\":\"kube-state-metrics\",\"namespace\":\"default\",\"pod\":\"nginx-configerror-5fdf8d4fb-cndz2\",\"prometheus\":\"monitoring/kube-prometheus-stack-prometheus\",\"reason\":\"CreateContainerConfigError\",\"service\":\"kube-prometheus-stack-kube-state-metrics\",\"severity\":\"warning\",\"team\":\"kubetriage\",\"uid\":\"4af75c5d-adba-49c2-ae33-abc565f99881\"},\"annotations\":{\"description\":\"Pod default/nginx-configerror-5fdf8d4fb-cndz2 has a config error preventing container start\",\"summary\":\"ConfigError on nginx-configerror-5fdf8d4fb-cndz2\"},\"startsAt\":\"2026-03-29T21:43:03.741Z\",\"endsAt\":\"0001-01-01T00:00:00Z\",\"generatorURL\":\"http://kube-prometheus-stack-prometheus.monitoring:9090/graph?g0.expr=kube_pod_container_status_waiting_reason%7Breason%3D%22CreateContainerConfigError%22%7D+%3D%3D+1\\u0026g0.tab=1\",\"fingerprint\":\"dd4794854bcc6abf\"}],\"groupLabels\":{\"alertname\":\"KubePodConfigError\",\"namespace\":\"default\",\"pod\":\"nginx-configerror-5fdf8d4fb-cndz2\"},\"commonLabels\":{\"alertname\":\"KubePodConfigError\",\"container\":\"nginx\",\"endpoint\":\"http\",\"instance\":\"10.1.6.199:8080\",\"job\":\"kube-state-metrics\",\"namespace\":\"default\",\"pod\":\"nginx-configerror-5fdf8d4fb-cndz2\",\"prometheus\":\"monitoring/kube-prometheus-stack-prometheus\",\"reason\":\"CreateContainerConfigError\",\"service\":\"kube-prometheus-stack-kube-state-metrics\",\"severity\":\"warning\",\"team\":\"kubetriage\",\"uid\":\"4af75c5d-adba-49c2-ae33-abc565f99881\"},\"commonAnnotations\":{\"description\":\"Pod default/nginx-configerror-5fdf8d4fb-cndz2 has a config error preventing container start\",\"summary\":\"ConfigError on nginx-configerror-5fdf8d4fb-cndz2\"},\"externalURL\":\"http://kube-prometheus-stack-alertmanager.monitoring:9093\",\"version\":\"4\",\"groupKey\":\"{}/{namespace=\\\"default\\\",team=\\\"kubetriage\\\"}:{alertname=\\\"KubePodConfigError\\\", namespace=\\\"default\\\", pod=\\\"nginx-configerror-5fdf8d4fb-cndz2\\\"}\",\"truncatedAlerts\":0}\n",
+#     "cookies": {},
+#     "fresh": false,
+#     "hostname": "payload-capture.default.svc.cluster.local",
+#     "ip": "::ffff:10.1.6.200",
+#     "ips": [],
+#     "protocol": "http",
+#     "query": {},
+#     "signedCookies": {},
+#     "subdomains": [
+#         "svc",
+#         "default",
+#         "payload-capture"
+#     ],
+#     "xhr": false,
+#     "os": {
+#         "hostname": "payload-capture"
+#     },
+#     "connection": {},
+#     "json": {
+#         "receiver": "default/kubetriage-webhook/kubetriage-webhook",
+#         "status": "firing",
+#         "alerts": [
+#             {
+#                 "status": "firing",
+#                 "labels": {
+#                     "alertname": "KubePodConfigError",
+#                     "container": "nginx",
+#                     "endpoint": "http",
+#                     "instance": "10.1.6.199:8080",
+#                     "job": "kube-state-metrics",
+#                     "namespace": "default",
+#                     "pod": "nginx-configerror-5fdf8d4fb-cndz2",
+#                     "prometheus": "monitoring/kube-prometheus-stack-prometheus",
+#                     "reason": "CreateContainerConfigError",
+#                     "service": "kube-prometheus-stack-kube-state-metrics",
+#                     "severity": "warning",
+#                     "team": "kubetriage",
+#                     "uid": "4af75c5d-adba-49c2-ae33-abc565f99881"
+#                 },
+#                 "annotations": {
+#                     "description": "Pod default/nginx-configerror-5fdf8d4fb-cndz2 has a config error preventing container start",
+#                     "summary": "ConfigError on nginx-configerror-5fdf8d4fb-cndz2"
+#                 },
+#                 "startsAt": "2026-03-29T21:43:03.741Z",
+#                 "endsAt": "0001-01-01T00:00:00Z",
+#                 "generatorURL": "http://kube-prometheus-stack-prometheus.monitoring:9090/graph?g0.expr=kube_pod_container_status_waiting_reason%7Breason%3D%22CreateContainerConfigError%22%7D+%3D%3D+1&g0.tab=1",
+#                 "fingerprint": "dd4794854bcc6abf"
+#             }
+#         ],
+#         "groupLabels": {
+#             "alertname": "KubePodConfigError",
+#             "namespace": "default",
+#             "pod": "nginx-configerror-5fdf8d4fb-cndz2"
+#         },
+#         "commonLabels": {
+#             "alertname": "KubePodConfigError",
+#             "container": "nginx",
+#             "endpoint": "http",
+#             "instance": "10.1.6.199:8080",
+#             "job": "kube-state-metrics",
+#             "namespace": "default",
+#             "pod": "nginx-configerror-5fdf8d4fb-cndz2",
+#             "prometheus": "monitoring/kube-prometheus-stack-prometheus",
+#             "reason": "CreateContainerConfigError",
+#             "service": "kube-prometheus-stack-kube-state-metrics",
+#             "severity": "warning",
+#             "team": "kubetriage",
+#             "uid": "4af75c5d-adba-49c2-ae33-abc565f99881"
+#         },
+#         "commonAnnotations": {
+#             "description": "Pod default/nginx-configerror-5fdf8d4fb-cndz2 has a config error preventing container start",
+#             "summary": "ConfigError on nginx-configerror-5fdf8d4fb-cndz2"
+#         },
+#         "externalURL": "http://kube-prometheus-stack-alertmanager.monitoring:9093",
+#         "version": "4",
+#         "groupKey": "{}/{namespace=\"default\",team=\"kubetriage\"}:{alertname=\"KubePodConfigError\", namespace=\"default\", pod=\"nginx-configerror-5fdf8d4fb-cndz2\"}",
+#         "truncatedAlerts": 0
+#     }
+# }
+# ::ffff:10.1.6.200 - - [29/Mar/2026:22:19:26 +0000] "POST / HTTP/1.1" 200 5420 "-" "Alertmanager/0.31.1"
+# {
+#     "path": "/",
+#     "headers": {
+#         "host": "payload-capture.default.svc.cluster.local:8080",
+#         "user-agent": "Alertmanager/0.31.1",
+#         "content-length": "1969",
+#         "content-type": "application/json"
+#     },
+#     "method": "POST",
+#     "body": "{\"receiver\":\"default/kubetriage-webhook/kubetriage-webhook\",\"status\":\"firing\",\"alerts\":[{\"status\":\"firing\",\"labels\":{\"alertname\":\"KubePodCrashLooping\",\"container\":\"nginx\",\"endpoint\":\"http\",\"instance\":\"10.1.6.199:8080\",\"job\":\"kube-state-metrics\",\"namespace\":\"default\",\"pod\":\"nginx-crashloop-7b595dfcc6-th47c\",\"prometheus\":\"monitoring/kube-prometheus-stack-prometheus\",\"reason\":\"CrashLoopBackOff\",\"service\":\"kube-prometheus-stack-kube-state-metrics\",\"severity\":\"warning\",\"team\":\"kubetriage\",\"uid\":\"530ad2e9-b3ff-4b9c-9bd3-49b350d7cd97\"},\"annotations\":{\"description\":\"Pod default/nginx-crashloop-7b595dfcc6-th47c is crash looping\",\"summary\":\"CrashLoopBackOff on nginx-crashloop-7b595dfcc6-th47c\"},\"startsAt\":\"2026-03-29T21:56:33.741Z\",\"endsAt\":\"0001-01-01T00:00:00Z\",\"generatorURL\":\"http://kube-prometheus-stack-prometheus.monitoring:9090/graph?g0.expr=kube_pod_container_status_waiting_reason%7Breason%3D%22CrashLoopBackOff%22%7D+%3D%3D+1\\u0026g0.tab=1\",\"fingerprint\":\"179636d4341bff0e\"}],\"groupLabels\":{\"alertname\":\"KubePodCrashLooping\",\"namespace\":\"default\",\"pod\":\"nginx-crashloop-7b595dfcc6-th47c\"},\"commonLabels\":{\"alertname\":\"KubePodCrashLooping\",\"container\":\"nginx\",\"endpoint\":\"http\",\"instance\":\"10.1.6.199:8080\",\"job\":\"kube-state-metrics\",\"namespace\":\"default\",\"pod\":\"nginx-crashloop-7b595dfcc6-th47c\",\"prometheus\":\"monitoring/kube-prometheus-stack-prometheus\",\"reason\":\"CrashLoopBackOff\",\"service\":\"kube-prometheus-stack-kube-state-metrics\",\"severity\":\"warning\",\"team\":\"kubetriage\",\"uid\":\"530ad2e9-b3ff-4b9c-9bd3-49b350d7cd97\"},\"commonAnnotations\":{\"description\":\"Pod default/nginx-crashloop-7b595dfcc6-th47c is crash looping\",\"summary\":\"CrashLoopBackOff on nginx-crashloop-7b595dfcc6-th47c\"},\"externalURL\":\"http://kube-prometheus-stack-alertmanager.monitoring:9093\",\"version\":\"4\",\"groupKey\":\"{}/{namespace=\\\"default\\\",team=\\\"kubetriage\\\"}:{alertname=\\\"KubePodCrashLooping\\\", namespace=\\\"default\\\", pod=\\\"nginx-crashloop-7b595dfcc6-th47c\\\"}\",\"truncatedAlerts\":0}\n",
+#     "cookies": {},
+#     "fresh": false,
+#     "hostname": "payload-capture.default.svc.cluster.local",
+#     "ip": "::ffff:10.1.6.200",
+#     "ips": [],
+#     "protocol": "http",
+#     "query": {},
+#     "signedCookies": {},
+#     "subdomains": [
+#         "svc",
+#         "default",
+#         "payload-capture"
+#     ],
+#     "xhr": false,
+#     "os": {
+#         "hostname": "payload-capture"
+#     },
+#     "connection": {},
+#     "json": {
+#         "receiver": "default/kubetriage-webhook/kubetriage-webhook",
+#         "status": "firing",
+#         "alerts": [
+#             {
+#                 "status": "firing",
+#                 "labels": {
+#                     "alertname": "KubePodCrashLooping",
+#                     "container": "nginx",
+#                     "endpoint": "http",
+#                     "instance": "10.1.6.199:8080",
+#                     "job": "kube-state-metrics",
+#                     "namespace": "default",
+#                     "pod": "nginx-crashloop-7b595dfcc6-th47c",
+#                     "prometheus": "monitoring/kube-prometheus-stack-prometheus",
+#                     "reason": "CrashLoopBackOff",
+#                     "service": "kube-prometheus-stack-kube-state-metrics",
+#                     "severity": "warning",
+#                     "team": "kubetriage",
+#                     "uid": "530ad2e9-b3ff-4b9c-9bd3-49b350d7cd97"
+#                 },
+#                 "annotations": {
+#                     "description": "Pod default/nginx-crashloop-7b595dfcc6-th47c is crash looping",
+#                     "summary": "CrashLoopBackOff on nginx-crashloop-7b595dfcc6-th47c"
+#                 },
+#                 "startsAt": "2026-03-29T21:56:33.741Z",
+#                 "endsAt": "0001-01-01T00:00:00Z",
+#                 "generatorURL": "http://kube-prometheus-stack-prometheus.monitoring:9090/graph?g0.expr=kube_pod_container_status_waiting_reason%7Breason%3D%22CrashLoopBackOff%22%7D+%3D%3D+1&g0.tab=1",
+#                 "fingerprint": "179636d4341bff0e"
+#             }
+#         ],
+#         "groupLabels": {
+#             "alertname": "KubePodCrashLooping",
+#             "namespace": "default",
+#             "pod": "nginx-crashloop-7b595dfcc6-th47c"
+#         },
+#         "commonLabels": {
+#             "alertname": "KubePodCrashLooping",
+#             "container": "nginx",
+#             "endpoint": "http",
+#             "instance": "10.1.6.199:8080",
+#             "job": "kube-state-metrics",
+#             "namespace": "default",
+#             "pod": "nginx-crashloop-7b595dfcc6-th47c",
+#             "prometheus": "monitoring/kube-prometheus-stack-prometheus",
+#             "reason": "CrashLoopBackOff",
+#             "service": "kube-prometheus-stack-kube-state-metrics",
+#             "severity": "warning",
+#             "team": "kubetriage",
+#             "uid": "530ad2e9-b3ff-4b9c-9bd3-49b350d7cd97"
+#         },
+#         "commonAnnotations": {
+#             "description": "Pod default/nginx-crashloop-7b595dfcc6-th47c is crash looping",
+#             "summary": "CrashLoopBackOff on nginx-crashloop-7b595dfcc6-th47c"
+#         },
+#         "externalURL": "http://kube-prometheus-stack-alertmanager.monitoring:9093",
+#         "version": "4",
+#         "groupKey": "{}/{namespace=\"default\",team=\"kubetriage\"}:{alertname=\"KubePodCrashLooping\", namespace=\"default\", pod=\"nginx-crashloop-7b595dfcc6-th47c\"}",
+#         "truncatedAlerts": 0
+#     }
+# }
+# ::ffff:10.1.6.200 - - [29/Mar/2026:22:19:26 +0000] "POST / HTTP/1.1" 200 5256 "-" "Alertmanager/0.31.1"
+# {
+#     "path": "/",
+#     "headers": {
+#         "host": "payload-capture.default.svc.cluster.local:8080",
+#         "user-agent": "Alertmanager/0.31.1",
+#         "content-length": "2027",
+#         "content-type": "application/json"
+#     },
+#     "method": "POST",
+#     "body": "{\"receiver\":\"default/kubetriage-webhook/kubetriage-webhook\",\"status\":\"firing\",\"alerts\":[{\"status\":\"firing\",\"labels\":{\"alertname\":\"KubePodImagePullBackOff\",\"container\":\"nginx\",\"endpoint\":\"http\",\"instance\":\"10.1.6.199:8080\",\"job\":\"kube-state-metrics\",\"namespace\":\"default\",\"pod\":\"nginx-imagepull-68ddb8d999-w5zh5\",\"prometheus\":\"monitoring/kube-prometheus-stack-prometheus\",\"reason\":\"ImagePullBackOff\",\"service\":\"kube-prometheus-stack-kube-state-metrics\",\"severity\":\"warning\",\"team\":\"kubetriage\",\"uid\":\"d806653d-2984-47a1-859d-e5c60c85ea00\"},\"annotations\":{\"description\":\"Pod default/nginx-imagepull-68ddb8d999-w5zh5 cannot pull image for container nginx\",\"summary\":\"ImagePullBackOff on nginx-imagepull-68ddb8d999-w5zh5\"},\"startsAt\":\"2026-03-29T22:15:03.741Z\",\"endsAt\":\"0001-01-01T00:00:00Z\",\"generatorURL\":\"http://kube-prometheus-stack-prometheus.monitoring:9090/graph?g0.expr=kube_pod_container_status_waiting_reason%7Breason%3D%22ImagePullBackOff%22%7D+%3D%3D+1\\u0026g0.tab=1\",\"fingerprint\":\"37b5372547a1858b\"}],\"groupLabels\":{\"alertname\":\"KubePodImagePullBackOff\",\"namespace\":\"default\",\"pod\":\"nginx-imagepull-68ddb8d999-w5zh5\"},\"commonLabels\":{\"alertname\":\"KubePodImagePullBackOff\",\"container\":\"nginx\",\"endpoint\":\"http\",\"instance\":\"10.1.6.199:8080\",\"job\":\"kube-state-metrics\",\"namespace\":\"default\",\"pod\":\"nginx-imagepull-68ddb8d999-w5zh5\",\"prometheus\":\"monitoring/kube-prometheus-stack-prometheus\",\"reason\":\"ImagePullBackOff\",\"service\":\"kube-prometheus-stack-kube-state-metrics\",\"severity\":\"warning\",\"team\":\"kubetriage\",\"uid\":\"d806653d-2984-47a1-859d-e5c60c85ea00\"},\"commonAnnotations\":{\"description\":\"Pod default/nginx-imagepull-68ddb8d999-w5zh5 cannot pull image for container nginx\",\"summary\":\"ImagePullBackOff on nginx-imagepull-68ddb8d999-w5zh5\"},\"externalURL\":\"http://kube-prometheus-stack-alertmanager.monitoring:9093\",\"version\":\"4\",\"groupKey\":\"{}/{namespace=\\\"default\\\",team=\\\"kubetriage\\\"}:{alertname=\\\"KubePodImagePullBackOff\\\", namespace=\\\"default\\\", pod=\\\"nginx-imagepull-68ddb8d999-w5zh5\\\"}\",\"truncatedAlerts\":0}\n",
+#     "cookies": {},
+#     "fresh": false,
+#     "hostname": "payload-capture.default.svc.cluster.local",
+#     "ip": "::ffff:10.1.6.200",
+#     "ips": [],
+#     "protocol": "http",
+#     "query": {},
+#     "signedCookies": {},
+#     "subdomains": [
+#         "svc",
+#         "default",
+#         "payload-capture"
+#     ],
+#     "xhr": false,
+#     "os": {
+#         "hostname": "payload-capture"
+#     },
+#     "connection": {},
+#     "json": {
+#         "receiver": "default/kubetriage-webhook/kubetriage-webhook",
+#         "status": "firing",
+#         "alerts": [
+#             {
+#                 "status": "firing",
+#                 "labels": {
+#                     "alertname": "KubePodImagePullBackOff",
+#                     "container": "nginx",
+#                     "endpoint": "http",
+#                     "instance": "10.1.6.199:8080",
+#                     "job": "kube-state-metrics",
+#                     "namespace": "default",
+#                     "pod": "nginx-imagepull-68ddb8d999-w5zh5",
+#                     "prometheus": "monitoring/kube-prometheus-stack-prometheus",
+#                     "reason": "ImagePullBackOff",
+#                     "service": "kube-prometheus-stack-kube-state-metrics",
+#                     "severity": "warning",
+#                     "team": "kubetriage",
+#                     "uid": "d806653d-2984-47a1-859d-e5c60c85ea00"
+#                 },
+#                 "annotations": {
+#                     "description": "Pod default/nginx-imagepull-68ddb8d999-w5zh5 cannot pull image for container nginx",
+#                     "summary": "ImagePullBackOff on nginx-imagepull-68ddb8d999-w5zh5"
+#                 },
+#                 "startsAt": "2026-03-29T22:15:03.741Z",
+#                 "endsAt": "0001-01-01T00:00:00Z",
+#                 "generatorURL": "http://kube-prometheus-stack-prometheus.monitoring:9090/graph?g0.expr=kube_pod_container_status_waiting_reason%7Breason%3D%22ImagePullBackOff%22%7D+%3D%3D+1&g0.tab=1",
+#                 "fingerprint": "37b5372547a1858b"
+#             }
+#         ],
+#         "groupLabels": {
+#             "alertname": "KubePodImagePullBackOff",
+#             "namespace": "default",
+#             "pod": "nginx-imagepull-68ddb8d999-w5zh5"
+#         },
+#         "commonLabels": {
+#             "alertname": "KubePodImagePullBackOff",
+#             "container": "nginx",
+#             "endpoint": "http",
+#             "instance": "10.1.6.199:8080",
+#             "job": "kube-state-metrics",
+#             "namespace": "default",
+#             "pod": "nginx-imagepull-68ddb8d999-w5zh5",
+#             "prometheus": "monitoring/kube-prometheus-stack-prometheus",
+#             "reason": "ImagePullBackOff",
+#             "service": "kube-prometheus-stack-kube-state-metrics",
+#             "severity": "warning",
+#             "team": "kubetriage",
+#             "uid": "d806653d-2984-47a1-859d-e5c60c85ea00"
+#         },
+#         "commonAnnotations": {
+#             "description": "Pod default/nginx-imagepull-68ddb8d999-w5zh5 cannot pull image for container nginx",
+#             "summary": "ImagePullBackOff on nginx-imagepull-68ddb8d999-w5zh5"
+#         },
+#         "externalURL": "http://kube-prometheus-stack-alertmanager.monitoring:9093",
+#         "version": "4",
+#         "groupKey": "{}/{namespace=\"default\",team=\"kubetriage\"}:{alertname=\"KubePodImagePullBackOff\", namespace=\"default\", pod=\"nginx-imagepull-68ddb8d999-w5zh5\"}",
+#         "truncatedAlerts": 0
+#     }
+# }
+# ::ffff:10.1.6.200 - - [29/Mar/2026:22:19:26 +0000] "POST / HTTP/1.1" 200 5372 "-" "Alertmanager/0.31.1"
+
+kubectl delete pod payload-capture -n default
+kubectl delete svc payload-capture -n default
+# restore AlertmanagerConfig to point back at kubetriage
+kubectl patch alertmanagerconfig kubetriage-webhook -n default \
+  --type='json' \
+  -p='[{"op":"replace","path":"/spec/receivers/0/webhookConfigs/0/url","value":"http://kubetriage.default.svc.cluster.local:8000/webhook/alertmanager"}]'
 ```
