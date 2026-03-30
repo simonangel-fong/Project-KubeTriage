@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import JSONResponse
-import store
+import agent.app.agent.store as store
 
 router = APIRouter()
 

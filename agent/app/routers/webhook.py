@@ -1,21 +1,30 @@
+# routers/webhook.py
 import logging
 from datetime import datetime, timezone
 from fastapi import APIRouter, BackgroundTasks, HTTPException
-from models import AlertmanagerPayload, IncidentRecord
-import store
-from agent import run_agent
+from ..models import AlertmanagerPayload
 
-router = APIRouter()
+from ..config import get_settings
+from ..agent import store
+from ..models import IncidentRecord
+# import store
+# from agent import run_agent
+
+router = APIRouter(prefix="/webhook", tags=["health"])
+
 logger = logging.getLogger(__name__)
 
+settings = get_settings()
 
-@router.post("/webhook/alertmanager", status_code=202)
-async def receive_alert(
+
+@router.post("/alertmanager", status_code=202)
+async def get_alert(
     payload: AlertmanagerPayload,
     background_tasks: BackgroundTasks
 ):
     results = []
-
+    logger.info(f"{payload.alerts}")
+    
     for alert in payload.alerts:
         if alert.status != "firing":
             continue
@@ -45,7 +54,7 @@ async def receive_alert(
             alert=alert
         )
         store.save_incident(record)
-        background_tasks.add_task(run_agent, record, alert)
+        # background_tasks.add_task(run_agent, record, alert)
 
         logger.info(f"Accepted: {key}")
         results.append({"dedup_key": key, "status": "accepted"})

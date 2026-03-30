@@ -1,4 +1,3 @@
-
 ```sh
 python -m venv .venv
 python.exe -m pip install --upgrade pip
@@ -8,4 +7,23 @@ pip install "fastapi[standard]" pydantic anthropic kubernetes
 cd agent/app
 uvicorn main:app --reload
 
+```
+
+- push image
+
+```sh
+cd agent
+docker build -t kubetriage agent/
+docker rm agent-kubetriage --force
+docker run --name agent-kubetriage -d --rm -p 8000:8000 kubetriage
+
+docker build -t kubetriage agent/ && docker tag kubetriage simonangelfong/kubetriage && docker push simonangelfong/kubetriage
+```
+
+- Deploy
+
+```sh
+kubectl apply -f agent/manifests
+kubectl replace --force -f agent/manifests --grace-period=0
+kubectl logs kubetriage -f
 ```

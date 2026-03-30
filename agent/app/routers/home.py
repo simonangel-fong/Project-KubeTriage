@@ -2,7 +2,7 @@
 import os
 from fastapi import APIRouter
 
-from config.setting import get_settings
+from ..config.setting import get_settings
 
 # ====================
 # Root endpoint

@@ -1,6 +1,6 @@
 import logging
 from datetime import datetime, timezone
-from models import IncidentRecord, Alert
+from agent.app.models.models import IncidentRecord, Alert
 from claude_client import run_triage
 import store
 

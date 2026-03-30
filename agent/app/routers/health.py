@@ -2,7 +2,7 @@
 import logging
 from fastapi import APIRouter
 
-from config import get_settings
+from ..config import get_settings
 
 router = APIRouter(prefix="/health", tags=["health"])
 

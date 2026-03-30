@@ -1,0 +1,33 @@
+# healthy.yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    app: kubetriage
+  name: kubetriage
+  namespace: default
+spec:
+  containers:
+  - name: kubetriage
+    image: simonangelfong/kubetriage:latest
+    ports:
+    - name: "http"   
+      containerPort: 8000
+      protocol: TCP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: kubetriage
+  name: kubetriage
+  namespace: default
+spec:
+  type: ClusterIP
+  selector:
+    app: kubetriage
+  ports:
+  - name: "http"   
+    port: 8000
+    protocol: TCP
+    targetPort: 8000

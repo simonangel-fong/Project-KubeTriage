@@ -1,5 +1,5 @@
 import time
-from models import IncidentRecord
+from ..models.models import IncidentRecord
 
 # keyed by dedup_key
 incidents: dict[str, IncidentRecord] = {}
@@ -32,8 +32,8 @@ def get_incident(key: str) -> IncidentRecord | None:
     return incidents.get(key)
 
 
-def save_incident(record: IncidentRecord):
-    incidents[key] = record
+# def save_incident(record: IncidentRecord):
+#     incidents[key] = record
 
 
 def save_incident(record: IncidentRecord):

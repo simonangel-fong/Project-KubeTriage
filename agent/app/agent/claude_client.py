@@ -1,7 +1,7 @@
 import os
 import anthropic
 from k8s_tools import get_pod_info, get_pod_events, get_pod_logs
-from models import TriageReport
+from agent.app.models.models import TriageReport
 
 TOOLS = [
     {
