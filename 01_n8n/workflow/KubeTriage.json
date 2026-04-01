@@ -1,0 +1,336 @@
+{
+  "name": "KubeTriage",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "kube-triage",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "adb2830e-914f-4181-90ad-0209bfb0e4d7",
+      "name": "Webhook",
+      "webhookId": "bb041d6d-01c7-45e5-8127-a2261a5dcbb4"
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.first().json.items;\n\n// find the pod that is not running\nconst failedPod = items.find(pod => \n  pod.status.phase !== 'Running' || \n  pod.status.containerStatuses?.some(c => \n    c.state?.waiting || c.restartCount > 0\n  )\n) || items[0]; // fallback to first pod if all look same\n\nconst podName = failedPod.metadata.name;\nconst namespace = failedPod.metadata.namespace;\n\nreturn { podName, namespace };"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        448,
+        0
+      ],
+      "id": "75b076ba-8e4f-4c6a-a56c-6b6a578fee54",
+      "name": "Get_podname"
+    },
+    {
+      "parameters": {
+        "url": "={{ $env.K8S_API }}/api/v1/namespaces/{{ $json.body.namespace }}/pods",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "labelSelector",
+              "value": "=app={{ $('Webhook').item.json.body.app }}"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.K8S_TOKEN }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        224,
+        0
+      ],
+      "id": "53a726d9-17b8-42fd-8311-b0eb2b3d72d5",
+      "name": "Get_potlist"
+    },
+    {
+      "parameters": {
+        "url": "={{ $env.K8S_API }}/api/v1/namespaces/{{ $('Get_podname').item.json.namespace }}/events",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "fieldSelector",
+              "value": "=involvedObject.name={{ $('Get_podname').item.json.podName}}"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.K8S_TOKEN }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        672,
+        0
+      ],
+      "id": "a15d65cd-0533-4068-8df2-5f6fbccfb3da",
+      "name": "Get_podevent"
+    },
+    {
+      "parameters": {
+        "url": "={{ $env.K8S_API }}/api/v1/namespaces/{{ $('Get_podname').item.json.namespace }}/pods/{{ $('Get_podname').item.json.podName}}/log",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "previous",
+              "value": "true"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.K8S_TOKEN }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        896,
+        0
+      ],
+      "id": "b416e65a-68d1-4cc1-9499-76e9237a3d4e",
+      "name": "Get_podlog"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        1424,
+        224
+      ],
+      "id": "a48cfa8d-511a-4fc9-bd57-ac05a2b0170c",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "KtG78m8DYlSRn2vk",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const podName = $(\"Get_podname\").first().json.podName;\nconst namespace = $(\"Get_podname\").first().json.namespace;\nconst app = $(\"Webhook\").first().json.body.app;\n\n// extract event messages\nconst events =\n  $(\"Get_podevent\")\n    .first()\n    .json.items?.map((e) => `[${e.reason}] ${e.message}`)\n    .join(\"\\n\") || \"no events found\";\n\n// logs come back as plain text\nconst logs = $(\"Get_podlog\").first().json.data || \"no logs found\";\n\nconst context = `\nApp: ${app}\nPod: ${podName}\nNamespace: ${namespace}\n\n=== EVENTS ===\n${events}\n\n=== LOGS ===\n${logs}\n`.trim();\n\nreturn { app, podName, context };\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1120,
+        0
+      ],
+      "id": "0aa145a4-2d2b-4bc2-91e3-097227287fa4",
+      "name": "gen_context"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.context }}",
+        "options": {
+          "systemMessage": "=\nYou are a Kubernetes incident analyst reviewing a pod failure.\n\nAnalyze the provided events and logs and produce a structured incident report with exactly these four sections:\n\nWHAT FAILED\nOne sentence naming the pod and failure mode.\n\nROOT CAUSE\nThe specific error message, file, and line number that caused the failure.\nFocus on ERROR and EMERG level log entries only. Ignore INFO level messages.\n\nCONFIG CONTEXT\nWhich Kubernetes resource likely caused the failure.\nChoose one: ConfigMap, Secret, Deployment spec, resource limits, or image.\n\nSUGGESTED ACTION\nOne sentence describing what to investigate.\nThen list 2-3 kubectl commands using the exact pod name, namespace, and resource names from the incident data.\nVerification commands only — do not suggest fixes.\n\n---\nEXAMPLE OUTPUT:\n\nWHAT FAILED\nPod api-7d6f9c-xkp2q is in CrashLoopBackOff because the container exits immediately on startup.\n\nROOT CAUSE\n[emerg] unknown directive \"locationaa\" in /etc/nginx/conf.d/default.conf:6\n\nCONFIG CONTEXT\nConfigMap — nginx configuration mounted into the container is malformed.\n\nSUGGESTED ACTION\nInspect the nginx ConfigMap and verify the configuration syntax.\nkubectl logs api-7d6f9c-xkp2q -n production --previous\nkubectl describe pod api-7d6f9c-xkp2q -n production\nkubectl get configmap api-nginx-config -n production -o yaml\n---\n\nKeep the total response under 200 words.\nReturn plain text only — no markdown, no asterisks, no bullet points.\n"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3,
+      "position": [
+        1344,
+        0
+      ],
+      "id": "48b2969c-021e-4d57-9eb5-3b36a59879e4",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "fromEmail": "tech.arguswatcher@gmail.com",
+        "toEmail": "tech.arguswatcher@gmail.com",
+        "subject": "=[INCIDENT] {{ $('Webhook').item.json.body.app }} - {{ $('Webhook').item.json.body.namespace }}",
+        "html": "=<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n  <meta charset=\"UTF-8\">\n  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n  <title>KubeTriage Incident Notification</title>\n  <style>\n    body {\n      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;\n      background-color: #f4f4f4;\n      margin: 0;\n      padding: 24px;\n      color: #333333;\n    }\n    .container {\n      max-width: 640px;\n      margin: 0 auto;\n      background-color: #ffffff;\n      border-radius: 8px;\n      overflow: hidden;\n      border: 1px solid #e0e0e0;\n    }\n    .header {\n      background-color: #b91c1c;\n      padding: 24px 32px;\n    }\n    .header h1 {\n      margin: 0;\n      color: #ffffff;\n      font-size: 18px;\n      font-weight: 600;\n      letter-spacing: 0.5px;\n    }\n    .header p {\n      margin: 4px 0 0;\n      color: #fecaca;\n      font-size: 13px;\n    }\n    .body {\n      padding: 28px 32px;\n    }\n    .intro {\n      font-size: 14px;\n      line-height: 1.6;\n      color: #444444;\n      margin: 0 0 24px;\n    }\n    .section-label {\n      font-size: 11px;\n      font-weight: 600;\n      letter-spacing: 1px;\n      text-transform: uppercase;\n      color: #888888;\n      margin: 0 0 10px;\n    }\n    .details-table {\n      width: 100%;\n      border-collapse: collapse;\n      margin-bottom: 24px;\n      background-color: #f9f9f9;\n      border-radius: 6px;\n      overflow: hidden;\n      border: 1px solid #e8e8e8;\n    }\n    .details-table tr:not(:last-child) td {\n      border-bottom: 1px solid #e8e8e8;\n    }\n    .details-table td {\n      padding: 10px 16px;\n      font-size: 13px;\n    }\n    .details-table td:first-child {\n      color: #888888;\n      width: 120px;\n      font-weight: 500;\n    }\n    .details-table td:last-child {\n      color: #222222;\n      font-family: 'Courier New', Courier, monospace;\n      font-size: 12px;\n    }\n    .analysis-box {\n      background-color: #f9f9f9;\n      border-left: 4px solid #b91c1c;\n      border-radius: 0 6px 6px 0;\n      padding: 16px 20px;\n      margin-bottom: 24px;\n      font-size: 13px;\n      line-height: 1.7;\n      color: #333333;\n      white-space: pre-wrap;\n    }\n    .footer {\n      border-top: 1px solid #e8e8e8;\n      padding: 16px 32px;\n      background-color: #fafafa;\n      font-size: 12px;\n      color: #999999;\n      text-align: center;\n    }\n    .footer strong {\n      color: #666666;\n    }\n  </style>\n</head>\n<body>\n  <div class=\"container\">\n\n    <!-- Header -->\n    <div class=\"header\">\n      <h1>⚠ Incident Detected</h1>\n      <p>KubeTriage — Automated Incident Notification</p>\n    </div>\n\n    <!-- Body -->\n    <div class=\"body\">\n\n      <p class=\"intro\">\n        Dear On-Call Engineer,<br><br>\n        This is an automated incident notification generated by KubeTriage.\n        A pod failure has been detected in your Kubernetes cluster.\n        Please review the following analysis and take appropriate action.\n      </p>\n\n      <!-- Incident Details -->\n      <p class=\"section-label\">Incident Details</p>\n      <table class=\"details-table\">\n        <tr>\n          <td>Application</td>\n          <td>{{ $('Webhook').item.json.body.app }}</td>\n        </tr>\n        <tr>\n          <td>Pod</td>\n          <td>{{ $('Get_podname').item.json.podName }}</td>\n        </tr>\n        <tr>\n          <td>Namespace</td>\n          <td>{{ $('Webhook').item.json.body.namespace }}</td>\n        </tr>\n        <tr>\n          <td>Revision</td>\n          <td>{{ $('Webhook').item.json.body.revision }}</td>\n        </tr>\n        <tr>\n          <td>Detected at</td>\n          <td>{{ $now.toISO() }}</td>\n        </tr>\n      </table>\n\n      <!-- AI Analysis -->\n      <p class=\"section-label\">AI Analysis</p>\n      <div class=\"analysis-box\">{{ $('AI Agent').item.json.output }}</div>\n\n    </div>\n\n    <!-- Footer -->\n    <div class=\"footer\">\n      This is an automated message. Do not reply to this email.<br>\n      <strong>KubeTriage — Arguswatcher Homelab</strong>\n    </div>\n\n  </div>\n</body>\n</html>",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        1696,
+        0
+      ],
+      "id": "fce08ec0-5463-4bce-ad0b-4212b94ad040",
+      "name": "Send email",
+      "webhookId": "2d93c073-53a8-493b-ac91-d7db2e884b17",
+      "credentials": {
+        "smtp": {
+          "id": "QoxGxPJMtEWkRlcO",
+          "name": "SMTP account"
+        }
+      }
+    }
+  ],
+  "pinData": {
+    "Webhook": [
+      {
+        "json": {
+          "headers": {
+            "host": "n8n.n8n.svc.cluster.local",
+            "user-agent": "Go-http-client/1.1",
+            "content-length": "382",
+            "content-type": "application/json",
+            "accept-encoding": "gzip"
+          },
+          "params": {},
+          "query": {},
+          "body": {
+            "app": "demo-app",
+            "namespace": "n8n",
+            "health": "Degraded",
+            "sync": "Synced",
+            "revision": "e4aa4408b43282d454fa4c3fa93da20d250cdee8",
+            "phase": "Succeeded",
+            "message": "successfully synced (all tasks run)",
+            "syncStarted": "2026-03-21T22:29:17Z",
+            "syncFinished": "2026-03-21T22:29:18Z",
+            "destination": "https://kubernetes.default.svc",
+            "project": "homelab"
+          },
+          "webhookUrl": "http://n8n.n8n.svc.cluster.local:5678/webhook/kube-triage",
+          "executionMode": "production"
+        }
+      }
+    ]
+  },
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Get_potlist",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get_podname": {
+      "main": [
+        [
+          {
+            "node": "Get_podevent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get_potlist": {
+      "main": [
+        [
+          {
+            "node": "Get_podname",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get_podevent": {
+      "main": [
+        [
+          {
+            "node": "Get_podlog",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get_podlog": {
+      "main": [
+        [
+          {
+            "node": "gen_context",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "gen_context": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Send email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "a8ceb817-ae08-4649-b795-5f957ebf6922",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "9308a43f4aeeaac0b53a2761bbdde27be41e353b5222000e6fc7e91fe28bf86f"
+  },
+  "id": "6OEUXBX0xQaJKdht",
+  "tags": []
+}

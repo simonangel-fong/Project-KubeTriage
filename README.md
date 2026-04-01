@@ -55,7 +55,13 @@ Three progressive phases, each building on insights from the previous.
 - **Tools**: `ArgoCD`, `n8x`, `Anthropic API`
 - **Outcome**: Pipeline executed end-to-end as designed
 - **Limitation**: n8n is a general-purpose workflow tool — deploying it inside the cluster solely for triage introduces unrelated infrastructure overhead (PostgreSQL, persistent volumes, ingress)
-- [n8n Workflow](./n8n/docs/n8n_workflow.md) · [PoC Demo](./n8n/docs/n8n_demo.md)
+
+- **Diagram**: n8n Workflow
+
+![pic](./01_n8n/pic/diagram_workflow.png)
+
+- [PoC Demo](./01_n8n/docs/n8n_demo.md)
+- [n8n Workflow](./01_n8n/docs/n8n_workflow.md)
 
 ---
 

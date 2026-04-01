@@ -1,8 +1,9 @@
 # KubeTriage - Set n8n workflow
 
-[Back](../README.md)
+[Back](../../README.md)
 
 - [KubeTriage - Set n8n workflow](#kubetriage---set-n8n-workflow)
+  - [Download Workflow](#download-workflow)
   - [Enable Notification wiht webhook](#enable-notification-wiht-webhook)
     - [Get webhook url](#get-webhook-url)
     - [Update Argocd Notification Webhook](#update-argocd-notification-webhook)
@@ -16,6 +17,12 @@
     - [Node06 — Code: gen\_context](#node06--code-gen_context)
     - [Node07 — AI Agent (Gemini)](#node07--ai-agent-gemini)
     - [Node08 — Snd Email](#node08--snd-email)
+
+---
+
+## Download Workflow
+
+- [Download](../workflow/KubeTriage.json)
 
 ---
 
