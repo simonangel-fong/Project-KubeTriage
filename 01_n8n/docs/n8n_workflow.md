@@ -32,7 +32,6 @@
     - prod url: http://n8n.n8n.svc.cluster.local/webhook/kube-triage
 
 ```sh
-
 kubectl run curl-test \
   --image=curlimages/curl \
   --restart=Never \
@@ -135,7 +134,7 @@ kubectl logs -n argocd -l app.kubernetes.io/name=argocd-notifications-controller
 
 ```
 
-![pic](./docs/webhook_testing.png)
+![pic](../pic/n8n_webhook_testing.png)
 
 ---
 
@@ -143,7 +142,7 @@ kubectl logs -n argocd -l app.kubernetes.io/name=argocd-notifications-controller
 
 - Diagram
 
-![pic](./docs/n8n_workflow.png)
+![pic](../pic/diagram_workflow.png)
 
 ### Node01 - Webhook: Webhook
 

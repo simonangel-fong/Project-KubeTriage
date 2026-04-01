@@ -1,121 +1,90 @@
-# Project KubeTriage: AI Agent Assistance for Kubernetes
+# KubeTriage: AI-Assisted Kubernetes Incident Triage
 
-> Automated Kubernetes incident triage using ArgoCD notifications and n8n workflows.
+> Exploring AI agent integration for Kubernetes incident triage — from PoC to a functional end-to-end pipeline.
 
-- [Project KubeTriage: AI Agent Assistance for Kubernetes](#project-kubetriage-ai-agent-assistance-for-kubernetes)
-  - [How it works](#how-it-works)
-    - [🟢T0: Healthy Deployment](#t0-healthy-deployment)
-    - [🟡T1: Sync for Update](#t1-sync-for-update)
-    - [🔴T2: Degraded Deployment and Triage Notification](#t2-degraded-deployment-and-triage-notification)
-    - [🟢T3: Bugfix and Recovery](#t3-bugfix-and-recovery)
-  - [n8n Workflow](#n8n-workflow)
-    - [v9 — EKS assistant agent](#v9--eks-assistant-agent)
-    - [v10 — EKS risky agent](#v10--eks-risky-agent)
-
----
-
-## How it works
-
-`KubeTriage` monitors `ArgoCD` application health and automatically triggers a triage workflow when a deployment degrades. The workflow collects context, generates a summary report, and notifies the team — reducing mean time to resolution.
+- [KubeTriage: AI-Assisted Kubernetes Incident Triage](#kubetriage-ai-assisted-kubernetes-incident-triage)
+  - [Problem](#problem)
+  - [Approach](#approach)
+    - [Traditional Pipeline](#traditional-pipeline)
+    - [AI-Augmented Pipeline](#ai-augmented-pipeline)
+  - [Implementation](#implementation)
+    - [Phase 1 — Proof of Concept: n8n Workflow](#phase-1--proof-of-concept-n8n-workflow)
+    - [Phase 2 — Framework Exploration: `Kagent`](#phase-2--framework-exploration-kagent)
+    - [Phase 3 — Custom Agent Pipeline](#phase-3--custom-agent-pipeline)
+  - [Key Takeaways](#key-takeaways)
 
 ---
 
-### 🟢T0: Healthy Deployment
+## Problem
 
-Application is running and healthy.
+Kubernetes incident response relies on manual log inspection, creating bottlenecks in the triage pipeline and inflating MTTR.
 
-![ArgoCD healthy state](./docs/demo_t0_argocd.png)
+AI agents offer a path to automated log analysis and `RCA(Root Cause Analysis)` summarization — but introducing autonomous agents
+into a production cluster raises questions around safety, RBAC scoping, and human oversight.
 
----
-
-### 🟡T1: Sync for Update
-
-A new version (containing a bug) is committed, pushed, and synced to the cluster.
-
-![ArgoCD sync](./docs/demo_t1_argocd.png)
+This project explores how to integrate AI agents into a Kubernetes triage pipeline, and evaluates the tradeoff between agent autonomy and operational risk.
 
 ---
 
-### 🔴T2: Degraded Deployment and Triage Notification
+## Approach
 
-ArgoCD detects the deployment as Degraded and fires a webhook to n8n.
+### Traditional Pipeline
 
-![ArgoCD degraded state](./docs/demo_t2_argocd.png)
+`Incident → Alert → Manual log inspection → Root cause identification → Mitigation`
 
-The n8n workflow is triggered and generates a triage summary report.
-
-![n8n workflow triggered](./docs/demo_t2_n8n.png)
-
-The report is delivered by email.
-
-![Email report page 1](./docs/demo_t2_email01.png)
-
-![Email report page 2](./docs/demo_t2_email02.png)
+- The `diagnosis phase` is the primary bottleneck — engineers manually extract signal from high-volume, unstructured logs across distributed pods, inflating MTTR.
 
 ---
 
-### 🟢T3: Bugfix and Recovery
+### AI-Augmented Pipeline
 
-The bug is fixed, committed, and the application is resynced. Health is restored.
+`Incident → Alert → AI agent log analysis + RCA report → Human verification → Mitigation`
 
-![ArgoCD recovered](./docs/demo_t3_argocd.png)
-
-See [Rollback and Sync CLI reference](./docs/cli.md) for the recovery commands used.
-
----
-
-## n8n Workflow
-
-![n8n workflow diagram](./docs/diagram_n8n_workflow.png)
-
-See [Creating the KubeTriage n8n workflow](./n8n/README.md) for setup instructions.
+- AI handles log triage and root cause summarization.
+- The human engineer retains approval authority before any remediation — preserving oversight while eliminating the manual diagnosis bottleneck.
 
 ---
 
-### v9 — EKS assistant agent
+## Implementation
 
-**Goal:** demonstrate real-world operational value in Kubernetes.
+Three progressive phases, each building on insights from the previous.
 
-**What it does:**
+### Phase 1 — Proof of Concept: n8n Workflow
 
-- Runs inside the cluster with scoped permissions
-- Integrates with observability stack (e.g., Prometheus alerts)
-- Automates:
-  - Incident data collection (logs, events, pod status)
-  - Incident summarization
-  - Suggested debugging actions
-
-**Demo:**
-
-- Break a microservice
-- Alert triggers the agent
-- Agent generates an incident report and sends notification (e.g., email/Slack)
-
-**Key point:**
-The agent reduces MTTR by automating triage — not replacing engineers, but accelerating them.
+- **Goal**: Validate the AI-augmented triage pipeline concept without custom code
+- **Tools**: `ArgoCD`, `n8x`, `Anthropic API`
+- **Outcome**: Pipeline executed end-to-end as designed
+- **Limitation**: n8n is a general-purpose workflow tool — deploying it inside the cluster solely for triage introduces unrelated infrastructure overhead (PostgreSQL, persistent volumes, ingress)
+- [n8n Workflow](./n8n/docs/n8n_workflow.md) · [PoC Demo](./n8n/docs/n8n_demo.md)
 
 ---
 
-### v10 — EKS risky agent
+### Phase 2 — Framework Exploration: `Kagent`
 
-**Goal:** expose the security risks of autonomous agents in production.
-
-**What it does:**
-
-- Runs with elevated permissions (intentionally misconfigured)
-- Accepts and executes unsafe or injected instructions
-- Demonstrates:
-  - RBAC misconfiguration risks
-  - Prompt/skill injection
-  - Uncontrolled command execution
-
-**Demo:**
-
-- Agent receives malicious or unsafe instruction
-- Executes destructive actions (e.g., delete deployment, install tools)
-- Show captured evidence (logs, commands, outcomes)
-
-**Key point:**
-Agents are powerful but dangerous — without proper constraints, they become a production risk.
+- **Goal**: Evaluate a Kubernetes-native AI agent framework (CNCF Sandbox project)
+- **Tools**: `Kagent`, `Anthropic API`
+- **Outcome**: `Kagent` provides native `human-in-the-loop` approval gates before agents execute production actions
+- **Limitation**: Kagent does not provide an end-to-end triage pipeline out of the box — additional microservices (webhook receiver, notifier) are required to complete the pipeline
 
 ---
+
+### Phase 3 — Custom Agent Pipeline
+
+- **Goal**: Implement a functional end-to-end triage pipeline with full control over agent scope and permissions
+- **Tools**: `Grafana Alertmanager`, `FastAPI`, `Anthropic API`
+- **Architecture**:
+  - `Incident → Grafana Alertmanager → FastAPI webhook → Log collection (function calling) → RCA report (Anthropic API) → Engineer notification`
+- **Key finding**: Agent capability and operational risk are directly governed by RBAC scope and tool permissions
+  - Read-only service account + predefined functions → constrained, human-in-the-loop pipeline
+  - Privileged role + unconstrained prompts → unsafe autonomous execution
+- **Known limitation**:
+  - Concurrent alerts can exhaust LLM API rate limits — production deployments would require a request queue, as provided by frameworks such as LangChain
+
+---
+
+## Key Takeaways
+
+- **Log triage is the primary MTTR bottleneck** — AI agents can automate RCA report generation, reducing manual diagnosis burden on on-call engineers
+- **Agent autonomy and operational risk are coupled** — RBAC scope, service account permissions, and tool constraints are the primary levers for safe agent design
+- **Human-in-the-loop is not optional in production** — function calling with predefined tools is safer than fully autonomous agents operating on a live cluster
+- **Kagent (CNCF Sandbox) shows promise** but requires additional orchestration layers for end-to-end integration — maturity should be monitored as the project evolves

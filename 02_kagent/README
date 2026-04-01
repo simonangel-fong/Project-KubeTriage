@@ -1,0 +1,32 @@
+
+```sh
+export ANTHROPIC_API_KEY="your-api-key-here"
+export OPENAI_API_KEY="your-api-key-here"
+kubectl create ns kagent
+# namespace/kagent created
+
+
+curl https://raw.githubusercontent.com/kagent-dev/kagent/refs/heads/main/scripts/get-kagent | bash
+
+kagent install --profile demo
+# kagent installed successfully
+
+# kagent dashboard (UI)
+kagent dashboard
+# Dashboard is not available on this platform
+# You can easily start the dashboard by running:
+# kubectl port-forward -n kagent service/kagent-ui 8082:8080
+# and then opening http://localhost:8082 in your browser
+
+kubectl port-forward -n kagent service/kagent-ui 8082:8080
+# http://localhost:8082
+
+# install kagent
+helm install kagent oci://ghcr.io/kagent-dev/kagent/helm/kagent \
+    --create-namespace  \
+    --namespace kagent \
+    --set providers.default=anthropic \
+    --set providers.anthropic.apiKey=$ANTHROPIC_API_KEY
+
+kubectl port-forward -n kagent svc/kagent-ui 8080:8080
+```
