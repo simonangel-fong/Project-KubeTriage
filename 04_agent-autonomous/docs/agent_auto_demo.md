@@ -68,7 +68,7 @@ kubectl apply -f 00_demo-app/manifests/04_crashloop.yaml
 ![pic](../pic/demo05_crashloop.png)
 
 - **Antonomous pipeline finished**
-  All pod is running.
+  All pod is running wihtin 7 minutes.
 
 ![pic](../pic/demo06_finish.png)
 
