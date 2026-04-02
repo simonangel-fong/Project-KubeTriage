@@ -1,23 +1,23 @@
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  name: kubetriage
+  name: kubetriage-privileged
   namespace: default
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
-  name: kubetriage-readonly
+  name: kubetriage-privileged
   namespace: default
 rules:
-  - apiGroups: ["", "apps"]
+  - apiGroups: ["*"]
     resources: ["*"]
     verbs: ["*"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
-  name: kubetriage-readonly-binding
+  name: kubetriage-privileged-binding
   namespace: default
 subjects:
   - kind: ServiceAccount
@@ -26,4 +26,4 @@ subjects:
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
-  name: kubetriage-readonly
+  name: kubetriage-privileged

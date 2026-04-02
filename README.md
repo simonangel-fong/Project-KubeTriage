@@ -96,6 +96,11 @@ Three progressive phases, each building on insights from the previous.
 - **Known limitation**:
   - Concurrent alerts can exhaust LLM API rate limits — production deployments would require a request queue, as provided by frameworks such as LangChain
 
+- [Function Calling Demo](./03_agent-function-calling/docs/agent_func_call_demo.md)
+- [Function Calling Details](./03_agent-function-calling/docs/agent_func_call_readme.md)
+- [Autonomous Details](./04_agent-autonomous/docs/agent_auto_readme.md)
+
+
 ---
 
 ## Key Takeaways

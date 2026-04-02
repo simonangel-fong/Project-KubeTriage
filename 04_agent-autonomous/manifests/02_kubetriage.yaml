@@ -4,13 +4,13 @@ kind: Pod
 metadata:
   labels:
     app: kubetriage
-  name: kubetriage
+  name: kubetriage-autonomous
   namespace: default
 spec:
-  serviceAccountName: kubetriage
+  serviceAccountName: kubetriage-privileged
   containers:
-  - name: kubetriage
-    image: simonangelfong/kubetriage:risk
+  - name: kubetriage-autonomous
+    image: simonangelfong/kubetriage:autonomous
     ports:
     - name: "http"   
       containerPort: 8000
