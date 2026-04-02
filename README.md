@@ -51,10 +51,11 @@ Three progressive phases, each building on insights from the previous.
 
 ### Phase 1 — Proof of Concept: n8n Workflow
 
-- **Goal**: Validate the AI-augmented triage pipeline concept without custom code
+- **Goal**: Validate the **AI-augmented triage pipeline concept** without custom code
+- **Environment**: `minikube`
 - **Tools**: `ArgoCD`, `n8x`, `Anthropic API`
 - **Outcome**: Pipeline executed end-to-end as designed
-- **Limitation**: n8n is a general-purpose workflow tool — deploying it inside the cluster solely for triage introduces unrelated infrastructure overhead (PostgreSQL, persistent volumes, ingress)
+- **Limitation**: `n8n` is a general-purpose workflow tool — deploying it inside the cluster solely for triage introduces unrelated infrastructure overhead (PostgreSQL, persistent volumes, ingress)
 
 - **Diagram**: n8n Workflow
 
@@ -67,20 +68,29 @@ Three progressive phases, each building on insights from the previous.
 
 ### Phase 2 — Framework Exploration: `Kagent`
 
-- **Goal**: Evaluate a Kubernetes-native AI agent framework (CNCF Sandbox project)
+- **Goal**: Evaluate a **Kubernetes-native AI agent framework** (CNCF Sandbox project)
+- **Environment**: `kubernetes in Docker Desktop`
 - **Tools**: `Kagent`, `Anthropic API`
 - **Outcome**: `Kagent` provides native `human-in-the-loop` approval gates before agents execute production actions
-- **Limitation**: Kagent does not provide an end-to-end triage pipeline out of the box — additional microservices (webhook receiver, notifier) are required to complete the pipeline
+- **Limitation**: `Kagent` does not provide an end-to-end triage pipeline out of the box — additional microservices (webhook receiver, notifier) are required to complete the pipeline
+
+![pic](./02_kagent/pic/demo_agent_hitl00.png)
+
+- [Kagent Demo](./02_kagent/docs/kagent_demo.md)
+- [Kagent Installation](./02_kagent/docs/kagent_install.md)
 
 ---
 
 ### Phase 3 — Custom Agent Pipeline
 
 - **Goal**: Implement a functional end-to-end triage pipeline with full control over agent scope and permissions
+- **Environment**: `kubernetes in Docker Desktop`
 - **Tools**: `Grafana Alertmanager`, `FastAPI`, `Anthropic API`
-- **Architecture**:
-  - `Incident → Grafana Alertmanager → FastAPI webhook → Log collection (function calling) → RCA report (Anthropic API) → Engineer notification`
-- **Key finding**: Agent capability and operational risk are directly governed by RBAC scope and tool permissions
+- **Architecture Diagram** - Function Calling
+  ![pic](./03_agent-function-calling/pic/agent_func_call_diagram.png)
+
+- **Key finding**:
+  Agent capability and operational risk are directly governed by RBAC scope and tool permissions
   - Read-only service account + predefined functions → constrained, human-in-the-loop pipeline
   - Privileged role + unconstrained prompts → unsafe autonomous execution
 - **Known limitation**:

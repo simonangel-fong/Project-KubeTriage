@@ -1,12 +1,14 @@
-
 ```sh
-export ANTHROPIC_API_KEY="your-api-key-here"
 export OPENAI_API_KEY="your-api-key-here"
 kubectl create ns kagent
 # namespace/kagent created
 
-
 curl https://raw.githubusercontent.com/kagent-dev/kagent/refs/heads/main/scripts/get-kagent | bash
+
+
+
+
+
 
 kagent install --profile demo
 # kagent installed successfully

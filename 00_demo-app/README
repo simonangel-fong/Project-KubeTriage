@@ -1,6 +1,0 @@
-
-```sh
-kubectl apply -f demo-app/manifests/
-kubectl apply -f demo-app/manifests/02_imagepull.yaml
-kubectl apply -f demo-app/manifests/03_oom.yaml
-```
